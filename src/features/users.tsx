@@ -44,7 +44,9 @@ export function Users() {
     [email, setEmail] = useState(""),
     [selected, setSelected] = useState<User | null>(null),
     [busy, setBusy] = useState(false),
-    [operation, setOperation] = useState<"ban" | "unban" | null>(null);
+    [operation, setOperation] = useState<"ban" | "unban" | "verify" | null>(
+      null,
+    );
   useEffect(() => {
     request<User[]>("/v1/user/all")
       .then(setItems)
@@ -117,6 +119,15 @@ export function Users() {
             <span className="text-sm">
               ID: {selected.id} · Codi: {selected.code}
             </span>
+            {selected.is_verified === false && selected.id != null && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => setOperation("verify")}
+              >
+                Verificar compte
+              </Button>
+            )}
             {selected.type === "hacker" && (
               <>
                 <Button variant="outline" onClick={() => setOperation("ban")}>
@@ -182,11 +193,20 @@ export function Users() {
       )}
       {operation && selected && (
         <ConfirmDialog
-          title={`${operation === "ban" ? "Bloquejar" : "Desbloquejar"} ${selected.name}`}
-          description="L'operació canvia l'accés del participant al servidor."
+          title={`${operation === "verify" ? "Verificar" : operation === "ban" ? "Bloquejar" : "Desbloquejar"} ${selected.name}`}
+          description={
+            operation === "verify"
+              ? `Verificaràs manualment el compte de ${selected.email || selected.nickname}, sense confirmació per correu. Aquesta acció no canvia els permisos ni desbloqueja el compte.`
+              : "L'operació canvia l'accés del participant al servidor."
+          }
           onClose={() => setOperation(null)}
           onConfirm={async () => {
-            await request(`/v1/hacker/${selected.id}/${operation}`, "POST");
+            if (operation === "verify") {
+              await request(`/v1/auth/force-verify/${selected.id}`, "POST");
+              setSelected({ ...selected, is_verified: true });
+            } else {
+              await request(`/v1/hacker/${selected.id}/${operation}`, "POST");
+            }
           }}
         />
       )}

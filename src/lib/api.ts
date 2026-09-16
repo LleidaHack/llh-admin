@@ -55,11 +55,9 @@ function saveToken(token: string) {
 }
 export class ApiError extends Error {
   status: number;
-  code?: string;
-  constructor(status: number, message: string, code?: string) {
+  constructor(status: number, message: string) {
     super(message);
     this.status = status;
-    this.code = code;
   }
 }
 export async function request<T>(
@@ -102,11 +100,7 @@ export async function request<T>(
       (data as { detail?: unknown; message?: unknown })?.detail ??
       (data as { message?: unknown })?.message;
     const message = serverError(detail, response.status);
-    throw new ApiError(
-      response.status,
-      message,
-      (data as { code?: string })?.code,
-    );
+    throw new ApiError(response.status, message);
   }
   if (data === null && raw)
     throw new ApiError(
@@ -138,21 +132,3 @@ export async function login(email: string, password: string) {
 export const hasSession = () => Boolean(accessToken);
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "S'ha produït un error inesperat.";
-
-export async function localVerificationAvailable() {
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname))
-    return false;
-  try {
-    const result = await request<{ enabled: boolean }>(
-      "/v1/auth/local-verification",
-    );
-    return result.enabled === true;
-  } catch {
-    return false;
-  }
-}
-export async function verifyLocalAccount(email: string) {
-  return request<{ success: boolean }>("/v1/auth/local-verification", "POST", {
-    email,
-  });
-}

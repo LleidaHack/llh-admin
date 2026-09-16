@@ -17,9 +17,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { ErrorBox, Loading } from "@/components/shared";
 import {
   login,
-  ApiError,
-  localVerificationAvailable,
-  verifyLocalAccount,
   clearSession,
   hasSession,
   request,
@@ -41,27 +38,11 @@ function Login({
 }) {
   const [error, setError] = useState(message),
     [busy, setBusy] = useState(false);
-  const [localVerification, setLocalVerification] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [notice, setNotice] = useState("");
-  useEffect(() => {
-    let active = true;
-    void localVerificationAvailable().then((enabled) => {
-      if (active) setLocalVerification(enabled);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
   return (
     <div
       className="login-layout"
       onInvalidCapture={catalanValidation}
-      onInputCapture={(event) => {
-        clearValidation(event);
-        setPendingEmail(null);
-        setNotice("");
-      }}
+      onInputCapture={clearValidation}
     >
       <section className="login-story">
         <div className="brand">
@@ -86,8 +67,6 @@ function Login({
               const f = new FormData(e.currentTarget);
               setBusy(true);
               setError("");
-              setPendingEmail(null);
-              setNotice("");
               try {
                 onLogin(
                   await login(
@@ -97,9 +76,6 @@ function Login({
                 );
               } catch (e) {
                 setError(errorMessage(e));
-                if (e instanceof ApiError && e.code === "EMAIL_NOT_VERIFIED") {
-                  setPendingEmail(String(f.get("email")));
-                }
               } finally {
                 setBusy(false);
               }
@@ -131,40 +107,6 @@ function Login({
               </Field>
             </FieldGroup>
             <ErrorBox error={error} />
-            {notice && (
-              <p role="status" className="text-sm">
-                {notice}
-              </p>
-            )}
-            {localVerification && pendingEmail && (
-              <div className="flex flex-col gap-2 border border-dashed p-3">
-                <p className="text-xs text-muted-foreground">
-                  Entorn local · verificació sense correu
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    setError("");
-                    try {
-                      const result = await verifyLocalAccount(pendingEmail);
-                      if (!result.success)
-                        throw new Error("No s'ha pogut verificar el compte.");
-                      setPendingEmail(null);
-                      setNotice("Compte verificat. Ja pots entrar al panell.");
-                    } catch (e) {
-                      setError(errorMessage(e));
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Verificar compte de prova
-                </Button>
-              </div>
-            )}
             <Button size="lg" disabled={busy}>
               {busy ? "Entrant…" : "Entrar al panell"}
               <ArrowRight data-icon="inline-end" />
