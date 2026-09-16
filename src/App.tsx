@@ -47,21 +47,7 @@ function Login({
       <section className="login-story">
         <div className="brand">
           <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
-          <span className="brand-label">/ admin</span>
         </div>
-        <div>
-          <p className="eyebrow">DE LA IDEA A LA TROBADA</p>
-          <h1>
-            Tot comença
-            <br />
-            amb un esdeveniment.
-          </h1>
-          <p>
-            Un espai per organitzar les edicions, tenir cura de la comunitat i
-            preparar el que ve.
-          </p>
-        </div>
-        <span className="text-sm">Panell d'organització · LleidaHack</span>
       </section>
       <main className="login-form">
         <div className="flex w-full max-w-sm flex-col gap-7">

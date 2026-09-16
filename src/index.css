@@ -171,9 +171,6 @@ h2 {
   mask: url("/brand/lleidahack.svg") left center / contain no-repeat;
   flex-shrink: 0;
 }
-.brand-label {
-  font-size: 12px;
-}
 .nav-caption {
   font-size: 9px;
   letter-spacing: 0.09em;
@@ -304,25 +301,7 @@ h2 {
   padding: 50px 60px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 70px;
   border-right: 1px solid var(--brand-ink);
-}
-.login-story .eyebrow {
-  color: inherit;
-}
-.login-story h1 {
-  font-size: clamp(2.5rem, 4.4vw, 4.5rem);
-  font-weight: 700;
-}
-.login-story p:not(.eyebrow) {
-  max-width: 40ch;
-  line-height: 1.9;
-  margin-top: 25px;
-}
-.login-story > span {
-  padding-top: 25px;
-  border-top: 1px solid currentColor;
 }
 .login-form {
   display: flex;
@@ -457,15 +436,8 @@ h2 {
   }
   .login-story {
     padding: 28px 24px;
-    gap: 36px;
     border-right: 0;
     border-bottom: 1px solid var(--brand-ink);
-  }
-  .login-story > span {
-    display: none;
-  }
-  .login-story h1 {
-    font-size: clamp(28px, 8vw, 40px);
   }
   .login-form {
     padding: 40px 24px;
