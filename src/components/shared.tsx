@@ -24,13 +24,13 @@ import { toast } from "sonner";
 export function ErrorBox({ error }: { error: string }) {
   return error ? (
     <Alert variant="destructive">
-      <AlertTitle>No se ha podido completar</AlertTitle>
+      <AlertTitle>No s'ha pogut completar</AlertTitle>
       <AlertDescription>{error}</AlertDescription>
     </Alert>
   ) : null;
 }
 export function EmptyBox({
-  title = "Todavía no hay resultados",
+  title = "Encara no hi ha resultats",
   children,
 }: {
   title?: string;
@@ -41,7 +41,7 @@ export function EmptyBox({
       <EmptyHeader>
         <EmptyTitle>{title}</EmptyTitle>
         <EmptyDescription>
-          {children || "Los datos aparecerán aquí cuando estén disponibles."}
+          {children || "Les dades apareixeran aquí quan estiguin disponibles."}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -49,7 +49,7 @@ export function EmptyBox({
 }
 export function Loading() {
   return (
-    <div aria-label="Cargando" className="flex flex-col gap-4">
+    <div aria-label="Carregant" className="flex flex-col gap-4">
       <Skeleton className="h-24 w-full" />
       <Skeleton className="h-48 w-full" />
     </div>
@@ -87,7 +87,7 @@ export function EditDialog({
     setError("");
     try {
       await onSave(new FormData(e.currentTarget));
-      toast.success("Cambios guardados");
+      toast.success("Canvis desats");
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -147,9 +147,9 @@ export function EditDialog({
               onClick={onClose}
               disabled={busy}
             >
-              Cancelar
+              Cancel·lar
             </Button>
-            <Button disabled={busy}>{busy ? "Guardando…" : "Guardar"}</Button>
+            <Button disabled={busy}>{busy ? "Desant…" : "Desar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -184,7 +184,7 @@ export function ConfirmDialog({
         <ErrorBox error={error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            Cancelar
+            Cancel·lar
           </Button>
           <Button
             variant="destructive"
@@ -193,7 +193,7 @@ export function ConfirmDialog({
               setBusy(true);
               try {
                 await onConfirm();
-                toast.success("Operación completada");
+                toast.success("Operació completada");
                 onClose();
               } catch (e) {
                 setError(errorMessage(e));
@@ -202,7 +202,7 @@ export function ConfirmDialog({
               }
             }}
           >
-            {busy ? "Procesando…" : "Confirmar"}
+            {busy ? "Processant…" : "Confirmar"}
           </Button>
         </DialogFooter>
       </DialogContent>

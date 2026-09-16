@@ -1,3 +1,4 @@
+import { accountType } from "@/lib/locale";
 import { useState, useEffect } from "react";
 import { request, errorMessage } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -67,10 +68,10 @@ export function Users() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="eyebrow">COMUNIDAD</p>
-        <h1>Usuarios</h1>
+        <p className="eyebrow">COMUNITAT</p>
+        <h1>Usuaris</h1>
         <p className="text-muted-foreground">
-          Consulta cuentas y gestiona el acceso de los participantes.
+          Consulta comptes i gestiona l'accés dels participants.
         </p>
       </div>
       <ErrorBox error={error} />
@@ -84,12 +85,12 @@ export function Users() {
         <FieldGroup className="max-w-md">
           <Field>
             <FieldLabel htmlFor="user-email">
-              Buscar una cuenta por email
+              Cercar un compte per correu electrònic
             </FieldLabel>
             <Input
               id="user-email"
               type="email"
-              placeholder="participante@ejemplo.com"
+              placeholder="participant@exemple.cat"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -97,7 +98,7 @@ export function Users() {
           </Field>
         </FieldGroup>
         <Button disabled={busy}>
-          {busy ? "Buscando…" : "Consultar cuenta"}
+          {busy ? "Cercant…" : "Consultar el compte"}
         </Button>
       </form>
       {selected && (
@@ -109,20 +110,20 @@ export function Users() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-3">
-            <Badge variant="secondary">{selected.type}</Badge>
+            <Badge variant="secondary">{accountType(selected.type)}</Badge>
             <Badge variant="outline">
-              {selected.is_verified ? "Email verificado" : "Sin verificar"}
+              {selected.is_verified ? "Correu verificat" : "Sense verificar"}
             </Badge>
             <span className="text-sm">
-              ID: {selected.id} · Código: {selected.code}
+              ID: {selected.id} · Codi: {selected.code}
             </span>
             {selected.type === "hacker" && (
               <>
                 <Button variant="outline" onClick={() => setOperation("ban")}>
-                  Bloquear acceso
+                  Bloquejar l'accés
                 </Button>
                 <Button variant="outline" onClick={() => setOperation("unban")}>
-                  Desbloquear acceso
+                  Desbloquejar l'accés
                 </Button>
               </>
             )}
@@ -130,8 +131,8 @@ export function Users() {
         </Card>
       )}
       <Input
-        aria-label="Filtrar usuarios"
-        placeholder="Filtrar por nombre o apodo…"
+        aria-label="Filtrar usuaris"
+        placeholder="Filtrar per nom o àlies…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="sm:max-w-xs"
@@ -142,10 +143,10 @@ export function Users() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Apodo</TableHead>
-              <TableHead>Tipo de cuenta</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead>Nom</TableHead>
+              <TableHead>Àlies</TableHead>
+              <TableHead>Tipus de compte</TableHead>
+              <TableHead>Accions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,13 +161,7 @@ export function Users() {
                   <TableCell>{u.name}</TableCell>
                   <TableCell>{u.nickname}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {{
-                        hacker: "Participante",
-                        lleida_hacker: "Organizador",
-                        company: "Empresa",
-                      }[u.type] || u.type}
-                    </Badge>
+                    <Badge variant="secondary">{accountType(u.type)}</Badge>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -175,7 +170,7 @@ export function Users() {
                       disabled={busy}
                       onClick={() => void lookup(u.nickname, "nickname")}
                     >
-                      Ver cuenta
+                      Veure el compte
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -187,8 +182,8 @@ export function Users() {
       )}
       {operation && selected && (
         <ConfirmDialog
-          title={`${operation === "ban" ? "Bloquear" : "Desbloquear"} a ${selected.name}`}
-          description="La operación cambia el acceso del participante al backend."
+          title={`${operation === "ban" ? "Bloquejar" : "Desbloquejar"} ${selected.name}`}
+          description="L'operació canvia l'accés del participant al servidor."
           onClose={() => setOperation(null)}
           onConfirm={async () => {
             await request(`/v1/hacker/${selected.id}/${operation}`, "POST");

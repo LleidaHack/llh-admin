@@ -37,3 +37,7 @@ The labeled demo event and test participant remain in the isolated database for 
 ## Visual identity update — 2026-09-16
 
 Applied the user-supplied style guide to login, navigation, events, forms, tables and shared shadcn components. Verified at 1440 × 1000 and 390 × 844; computed body font is Space Mono, mobile document width is 390px, and the create-event dialog scrolls within the viewport. Login against the local backend succeeds. Build and all 11 frontend tests pass. Backend request logic is unchanged.
+
+## Catalan localization — 2026-09-16
+
+17 frontend tests pass, including API error translation, validation-field labels, unknown-error fallback, account types and Catalan month formatting. Browser checks cover required-field validation, incorrect-password feedback, successful login, event creation dialog and mobile layout. Interface labels and document language are Catalan; existing user-entered event/account data is preserved.

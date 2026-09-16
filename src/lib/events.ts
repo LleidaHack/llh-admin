@@ -1,3 +1,4 @@
+import { fieldNames } from "./locale";
 import type { EventRecord } from "./api";
 export const emptyEvent = {
   name: "",
@@ -16,11 +17,11 @@ export function eventPayload(form: FormData, current?: EventRecord) {
   const number = (key: string, minimum: number) => {
     const n = Number(value(key));
     if (!Number.isInteger(n) || n < minimum)
-      throw new Error(`Revisa el campo ${key}.`);
+      throw new Error(`Revisa el camp «${fieldNames[key] || "Valor"}».`);
     return n;
   };
   if (!value("name") || !value("location"))
-    throw new Error("Indica el nombre y la ubicación.");
+    throw new Error("Indica el nom i la ubicació.");
   const start = value("start_date"),
     end = value("end_date");
   if (
@@ -30,7 +31,9 @@ export function eventPayload(form: FormData, current?: EventRecord) {
     !Number.isFinite(Date.parse(end)) ||
     new Date(end) <= new Date(start)
   )
-    throw new Error("La fecha de fin debe ser posterior al inicio.");
+    throw new Error(
+      "La data de finalització ha de ser posterior a la d'inici.",
+    );
   return {
     name: value("name"),
     description: value("description"),
@@ -45,7 +48,7 @@ export function eventPayload(form: FormData, current?: EventRecord) {
   };
 }
 export function dateLabel(value: string) {
-  return new Date(value).toLocaleDateString("es-ES", {
+  return new Date(value).toLocaleDateString("ca-ES", {
     day: "numeric",
     month: "short",
     year: "numeric",

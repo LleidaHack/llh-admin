@@ -27,39 +27,39 @@ export function EventEditor({
   const fields: FormField[] = [
     {
       name: "name",
-      label: "Nombre del evento",
+      label: "Nom de l'esdeveniment",
       required: true,
       value: data.name,
     },
     {
       name: "location",
-      label: "Ubicación",
+      label: "Ubicació",
       required: true,
       value: data.location,
     },
     {
       name: "description",
-      label: "Descripción",
+      label: "Descripció",
       multiline: true,
       value: data.description,
     },
     {
       name: "start_date",
-      label: "Inicio",
+      label: "Inici",
       type: "datetime-local",
       required: true,
       value: data.start_date.slice(0, 16),
     },
     {
       name: "end_date",
-      label: "Fin",
+      label: "Fi",
       type: "datetime-local",
       required: true,
       value: data.end_date.slice(0, 16),
     },
     {
       name: "max_participants",
-      label: "Plazas",
+      label: "Places",
       type: "number",
       min: 0,
       required: true,
@@ -67,7 +67,7 @@ export function EventEditor({
     },
     {
       name: "max_group_size",
-      label: "Personas por equipo",
+      label: "Persones per equip",
       type: "number",
       min: 1,
       required: true,
@@ -75,7 +75,7 @@ export function EventEditor({
     },
     {
       name: "max_sponsors",
-      label: "Máximo de patrocinadores",
+      label: "Màxim de patrocinadors",
       type: "number",
       min: 0,
       required: true,
@@ -83,7 +83,7 @@ export function EventEditor({
     },
     {
       name: "price",
-      label: "Precio (valor entero de la API)",
+      label: "Preu (valor enter de l'API)",
       type: "number",
       min: 0,
       required: true,
@@ -92,8 +92,8 @@ export function EventEditor({
   ];
   return (
     <EditDialog
-      title={event ? "Editar evento" : "Crear un evento"}
-      description="Define los datos de esta edición. Las fechas se guardan tal como las introduces."
+      title={event ? "Editar l'esdeveniment" : "Crear un esdeveniment"}
+      description="Defineix les dades d'aquesta edició. Les dates es desen tal com les introdueixes."
       fields={fields}
       onClose={onClose}
       onSave={async (f) => {
@@ -108,8 +108,8 @@ export function EventEditor({
     >
       {!event && (
         <p className="text-sm text-muted-foreground">
-          El evento se creará con las inscripciones abiertas. Puedes cerrarlas
-          desde su ficha.
+          L'esdeveniment es crearà amb les inscripcions obertes. Pots tancar-les
+          des de la seva fitxa.
         </p>
       )}
     </EditDialog>
@@ -133,23 +133,23 @@ export function Events({
     <div className="flex flex-col gap-7">
       <div className="page-heading events-intro">
         <div>
-          <p className="eyebrow">TU PRÓXIMA EDICIÓN</p>
-          <h1>Eventos</h1>
+          <p className="eyebrow">LA TEVA PROPERA EDICIÓ</p>
+          <h1>Esdeveniments</h1>
           <p className="text-muted-foreground">
-            Todo lo que necesitas para poner una hackathon en marcha.
+            Tot el que necessites per posar una hackató en marxa.
           </p>
         </div>
         <Button variant="secondary" onClick={() => setCreate(true)}>
           <Plus data-icon="inline-start" />
-          Crear evento
+          Crear esdeveniment
         </Button>
       </div>
       <div className="stats-grid">
         {[
-          ["Eventos activos", events.length],
-          ["Inscripciones abiertas", events.filter((e) => e.is_open).length],
+          ["Esdeveniments actius", events.length],
+          ["Inscripcions obertes", events.filter((e) => e.is_open).length],
           [
-            "Plazas previstas",
+            "Places previstes",
             events.reduce((n, e) => n + e.max_participants, 0),
           ],
         ].map(([label, value]) => (
@@ -163,12 +163,12 @@ export function Events({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2>
-          Tus eventos{" "}
+          Els teus esdeveniments{" "}
           <span className="text-muted-foreground">/ {events.length}</span>
         </h2>
         <Input
-          aria-label="Buscar eventos"
-          placeholder="Buscar por nombre o ubicación…"
+          aria-label="Cercar esdeveniments"
+          placeholder="Cercar per nom o ubicació…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="sm:max-w-xs"
@@ -181,17 +181,17 @@ export function Events({
               <CardHeader>
                 <div className="mb-3 flex justify-between">
                   <span className="text-sm text-muted-foreground">
-                    EDICIÓN / {new Date(e.start_date).getFullYear()}
+                    EDICIÓ / {new Date(e.start_date).getFullYear()}
                   </span>
                   <Badge variant={e.is_open ? "default" : "secondary"}>
                     {e.is_open
-                      ? "Inscripciones abiertas"
-                      : "Inscripciones cerradas"}
+                      ? "Inscripcions obertes"
+                      : "Inscripcions tancades"}
                   </Badge>
                 </div>
                 <CardTitle>{e.name}</CardTitle>
                 <CardDescription>
-                  {e.description || "Sin descripción"}
+                  {e.description || "Sense descripció"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -206,7 +206,7 @@ export function Events({
               </CardContent>
               <CardFooter className="justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {e.max_participants} plazas · Equipos de {e.max_group_size}
+                  {e.max_participants} places · Equips de {e.max_group_size}
                 </p>
                 <Button variant="outline" onClick={() => onSelect(e.id)}>
                   Gestionar
@@ -219,12 +219,14 @@ export function Events({
       ) : (
         <EmptyBox
           title={
-            query ? "Ningún evento coincide" : "El próximo evento empieza aquí"
+            query
+              ? "Cap esdeveniment coincideix"
+              : "El proper esdeveniment comença aquí"
           }
         >
           {query
-            ? "Prueba con otro nombre."
-            : "Crea tu primera edición para gestionar inscripciones, equipos y patrocinadores."}
+            ? "Prova amb un altre nom."
+            : "Crea la teva primera edició per gestionar inscripcions, equips i patrocinadors."}
         </EmptyBox>
       )}
       {create && (

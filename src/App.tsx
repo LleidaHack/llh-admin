@@ -1,3 +1,4 @@
+import { catalanValidation, clearValidation } from "@/lib/locale";
 import { useState, useEffect, useCallback } from "react";
 import {
   CalendarDays,
@@ -38,35 +39,39 @@ function Login({
   const [error, setError] = useState(message),
     [busy, setBusy] = useState(false);
   return (
-    <div className="login-layout">
+    <div
+      className="login-layout"
+      onInvalidCapture={catalanValidation}
+      onInputCapture={clearValidation}
+    >
       <section className="login-story">
         <div className="brand">
           <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
           <span className="brand-label">/ admin</span>
         </div>
         <div>
-          <p className="eyebrow">DE LA IDEA AL ENCUENTRO</p>
+          <p className="eyebrow">DE LA IDEA A LA TROBADA</p>
           <h1>
-            Todo empieza
+            Tot comença
             <br />
-            con un evento.
+            amb un esdeveniment.
           </h1>
           <p>
-            Un espacio para organizar las ediciones, cuidar de la comunidad y
-            preparar lo que viene.
+            Un espai per organitzar les edicions, tenir cura de la comunitat i
+            preparar el que ve.
           </p>
         </div>
-        <span className="text-sm">Panel de organización · LleidaHack</span>
+        <span className="text-sm">Panell d'organització · LleidaHack</span>
       </section>
       <main className="login-form">
         <div className="flex w-full max-w-sm flex-col gap-7">
           <Badge variant="outline" className="self-start">
-            ACCESO DE ORGANIZADORES
+            ACCÉS D'ORGANITZADORS
           </Badge>
           <div>
-            <h2 className="login-title">Bienvenido de nuevo</h2>
+            <h2 className="login-title">Et donem la benvinguda</h2>
             <p className="mt-2 text-muted-foreground">
-              Entra con tu cuenta de LleidaHack.
+              Entra amb el teu compte de LleidaHack.
             </p>
           </div>
           <form
@@ -92,19 +97,19 @@ function Login({
           >
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldLabel htmlFor="email">Correu electrònic</FieldLabel>
                 <Input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder="tu@exemple.cat"
                   autoComplete="username"
                   required
                   disabled={busy}
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+                <FieldLabel htmlFor="password">Contrasenya</FieldLabel>
                 <Input
                   id="password"
                   name="password"
@@ -117,12 +122,12 @@ function Login({
             </FieldGroup>
             <ErrorBox error={error} />
             <Button size="lg" disabled={busy}>
-              {busy ? "Entrando…" : "Entrar al panel"}
+              {busy ? "Entrant…" : "Entrar al panell"}
               <ArrowRight data-icon="inline-end" />
             </Button>
           </form>
           <p className="text-sm text-muted-foreground">
-            Necesitas una cuenta de organizador activa y verificada.
+            Necessites un compte d'organitzador actiu i verificat.
           </p>
         </div>
       </main>
@@ -153,7 +158,7 @@ export default function App() {
       request<Profile>("/v1/auth/me")
         .then((p) => {
           if (p.type !== "lleida_hacker")
-            throw new Error("Se necesita una cuenta de organizador.");
+            throw new Error("Cal un compte d'organitzador.");
           setProfile(p);
         })
         .catch((e) => {
@@ -164,7 +169,7 @@ export default function App() {
     const expire = () => {
       setProfile(null);
       setLoading(true);
-      setSessionMessage("Tu sesión ha caducado. Vuelve a entrar.");
+      setSessionMessage("La sessió ha caducat. Torna a entrar.");
       setEvents([]);
       setSelected(null);
     };
@@ -194,17 +199,21 @@ export default function App() {
       </>
     );
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      onInvalidCapture={catalanValidation}
+      onInputCapture={clearValidation}
+    >
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
         </div>
-        <p className="nav-caption">ESPACIO DE ORGANIZACIÓN</p>
-        <nav aria-label="Navegación principal">
+        <p className="nav-caption">ESPAI D'ORGANITZACIÓ</p>
+        <nav aria-label="Navegació principal">
           {[
-            { id: "events", label: "Eventos", icon: CalendarDays },
-            { id: "companies", label: "Empresas", icon: Building2 },
-            { id: "users", label: "Usuarios", icon: Users },
+            { id: "events", label: "Esdeveniments", icon: CalendarDays },
+            { id: "companies", label: "Empreses", icon: Building2 },
+            { id: "users", label: "Usuaris", icon: Users },
           ].map((item) => (
             <Button
               key={item.id}
@@ -218,9 +227,9 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <p className="text-sm font-medium">Hecho para organizar.</p>
+          <p className="text-sm font-medium">Fet per organitzar.</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Cada edición, un nuevo comienzo.
+            Cada edició, un nou començament.
           </p>
           <Button variant="ghost" asChild className="mt-4 justify-start">
             <a
@@ -228,7 +237,7 @@ export default function App() {
               target="_blank"
               rel="noreferrer"
             >
-              Documentación API
+              Documentació de l'API
               <ExternalLink data-icon="inline-end" />
             </a>
           </Button>
@@ -238,7 +247,7 @@ export default function App() {
         <header className="topbar">
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
-              Panel de gestión
+              Panell de gestió
             </span>
             <Badge variant="outline">Provisional</Badge>
           </div>
@@ -247,7 +256,7 @@ export default function App() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Cerrar sesión"
+              aria-label="Tancar la sessió"
               onClick={() => {
                 clearSession();
                 setProfile(null);
@@ -265,7 +274,7 @@ export default function App() {
           {error && (
             <Button variant="outline" onClick={() => void load()}>
               <RefreshCw data-icon="inline-start" />
-              Reintentar
+              Tornar-ho a provar
             </Button>
           )}
           {section === "events" ? (
@@ -288,8 +297,8 @@ export default function App() {
           )}
         </main>
         <footer className="workspace-footer">
-          LleidaHack · Organización de eventos
-          <span>Una comunidad. Muchas ideas.</span>
+          LleidaHack · Organització d'esdeveniments
+          <span>Una comunitat. Moltes idees.</span>
         </footer>
       </div>
       <Toaster richColors position="bottom-right" />

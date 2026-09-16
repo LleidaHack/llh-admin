@@ -1,3 +1,4 @@
+import { serverError } from "./locale";
 export type EventRecord = {
   id: number;
   name: string;
@@ -80,7 +81,7 @@ export async function request<T>(
   } catch {
     throw new ApiError(
       0,
-      "No se puede conectar con el backend. Comprueba que está en marcha.",
+      "No es pot connectar amb el servidor. Comprova que estigui en marxa.",
     );
   }
   const raw = await response.text();
@@ -98,23 +99,13 @@ export async function request<T>(
     const detail =
       (data as { detail?: unknown; message?: unknown })?.detail ??
       (data as { message?: unknown })?.message;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : Array.isArray(detail)
-          ? detail
-              .map(
-                (e: { loc?: string[]; msg?: string }) =>
-                  `${e.loc?.slice(1).join(".")}: ${e.msg}`,
-              )
-              .join("; ")
-          : `La operación ha fallado (${response.status}).`;
+    const message = serverError(detail, response.status);
     throw new ApiError(response.status, message);
   }
   if (data === null && raw)
     throw new ApiError(
       response.status,
-      "El backend ha devuelto una respuesta no válida.",
+      "El servidor ha retornat una resposta no vàlida.",
     );
   return data as T;
 }
@@ -131,7 +122,7 @@ export async function login(email: string, password: string) {
   try {
     const user = await request<Profile>("/v1/auth/me");
     if (user.type !== "lleida_hacker")
-      throw new Error("Este panel requiere una cuenta de organizador.");
+      throw new Error("Aquest panell requereix un compte d'organitzador.");
     return user;
   } catch (error) {
     clearSession();
@@ -140,4 +131,4 @@ export async function login(email: string, password: string) {
 }
 export const hasSession = () => Boolean(accessToken);
 export const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : "Ha ocurrido un error inesperado.";
+  error instanceof Error ? error.message : "S'ha produït un error inesperat.";

@@ -109,7 +109,7 @@ export function EventDetail({
       await request(path, method, body);
       await load();
       await reloadEvents();
-      toast.success("Cambios guardados");
+      toast.success("Canvis desats");
       return true;
     } catch (e) {
       setError(errorMessage(e));
@@ -121,7 +121,7 @@ export function EventDetail({
   const confirm = (title: string, path: string, method = "PUT") =>
     setConfirmation({
       title,
-      description: "Este cambio se aplicará al evento seleccionado.",
+      description: "Aquest canvi s'aplicarà a l'esdeveniment seleccionat.",
       run: async () => {
         await request(path, method);
         await load();
@@ -133,7 +133,7 @@ export function EventDetail({
       <>
         <ErrorBox error={error} />
         <Button variant="outline" onClick={onBack}>
-          Volver a eventos
+          Tornar als esdeveniments
         </Button>
       </>
     );
@@ -144,11 +144,11 @@ export function EventDetail({
     <div className="flex flex-col gap-6">
       <Button variant="ghost" className="self-start" onClick={onBack}>
         <ArrowLeft data-icon="inline-start" />
-        Todos los eventos
+        Tots els esdeveniments
       </Button>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">GESTIÓN DEL EVENTO / {event.id}</p>
+          <p className="eyebrow">GESTIÓ DE L'ESDEVENIMENT / {event.id}</p>
           <h1>{event.name}</h1>
           <p className="text-muted-foreground">
             {event.location} · {dateLabel(event.start_date)} —{" "}
@@ -159,13 +159,13 @@ export function EventDetail({
           <Button
             variant="outline"
             onClick={() => void load()}
-            aria-label="Actualizar evento"
+            aria-label="Actualitzar l'esdeveniment"
           >
             <RefreshCw />
           </Button>
           <Button variant="outline" onClick={() => setEditing(true)}>
             <Pencil data-icon="inline-start" />
-            Editar evento
+            Editar l'esdeveniment
           </Button>
           <Button
             disabled={busy}
@@ -173,42 +173,42 @@ export function EventDetail({
               void action(`/v1/event/${id}`, "PUT", { is_open: !event.is_open })
             }
           >
-            {event.is_open ? "Cerrar inscripciones" : "Abrir inscripciones"}
+            {event.is_open ? "Tancar inscripcions" : "Obrir inscripcions"}
           </Button>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Badge variant={event.is_open ? "default" : "secondary"}>
-          {event.is_open ? "Inscripciones abiertas" : "Inscripciones cerradas"}
+          {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"}
         </Badge>
-        <Badge variant="outline">{event.max_participants} plazas</Badge>
-        <Badge variant="outline">{participants.length} inscritos</Badge>
+        <Badge variant="outline">{event.max_participants} places</Badge>
+        <Badge variant="outline">{participants.length} inscrits</Badge>
       </div>
       <ErrorBox error={error} />
       <Tabs defaultValue="participants">
         <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="participants">
-            Inscripciones ({participants.length})
+            Inscripcions ({participants.length})
           </TabsTrigger>
-          <TabsTrigger value="teams">Equipos ({teams.length})</TabsTrigger>
+          <TabsTrigger value="teams">Equips ({teams.length})</TabsTrigger>
           <TabsTrigger value="sponsors">
-            Patrocinadores ({sponsors.length})
+            Patrocinadors ({sponsors.length})
           </TabsTrigger>
-          <TabsTrigger value="meals">Comidas ({meals.length})</TabsTrigger>
-          <TabsTrigger value="checkin">Asistencia</TabsTrigger>
-          <TabsTrigger value="settings">Información</TabsTrigger>
+          <TabsTrigger value="meals">Àpats ({meals.length})</TabsTrigger>
+          <TabsTrigger value="checkin">Assistència</TabsTrigger>
+          <TabsTrigger value="settings">Informació</TabsTrigger>
         </TabsList>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
             <div>
-              <h2>Inscripciones</h2>
+              <h2>Inscripcions</h2>
               <p className="text-sm text-muted-foreground">
-                Revisa las solicitudes y decide quién participa.
+                Revisa les sol·licituds i decideix qui participa.
               </p>
             </div>
             <Input
-              aria-label="Buscar participantes"
-              placeholder="Buscar nombre o email…"
+              aria-label="Cercar participants"
+              placeholder="Cercar per nom o correu…"
               className="sm:max-w-xs"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -218,10 +218,10 @@ export function EventDetail({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Participante</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead>Participant</TableHead>
+                  <TableHead>Correu electrònic</TableHead>
+                  <TableHead>Estat</TableHead>
+                  <TableHead className="text-right">Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,10 +236,10 @@ export function EventDetail({
                         }
                       >
                         {{
-                          accepted: "Aceptado",
-                          pending: "Pendiente",
-                          rejected: "Rechazado",
-                        }[p.status] || p.status}
+                          accepted: "Acceptat",
+                          pending: "Pendent",
+                          rejected: "Rebutjat",
+                        }[p.status] || "Desconegut"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -250,12 +250,12 @@ export function EventDetail({
                             disabled={busy}
                             onClick={() =>
                               confirm(
-                                `Aceptar a ${p.name}`,
+                                `Acceptar ${p.name}`,
                                 `/v1/event/${id}/accept/${p.id}`,
                               )
                             }
                           >
-                            Aceptar
+                            Acceptar
                           </Button>
                         )}
                         {p.status === "accepted" && (
@@ -264,12 +264,12 @@ export function EventDetail({
                             size="sm"
                             onClick={() =>
                               confirm(
-                                `Retirar aceptación de ${p.name}`,
+                                `Retirar l'acceptació de ${p.name}`,
                                 `/v1/event/${id}/unaccept/${p.id}`,
                               )
                             }
                           >
-                            Retirar aceptación
+                            Retirar l'acceptació
                           </Button>
                         )}
                         {p.status === "pending" && (
@@ -278,12 +278,12 @@ export function EventDetail({
                             size="sm"
                             onClick={() =>
                               confirm(
-                                `Rechazar a ${p.name}`,
+                                `Rebutjar ${p.name}`,
                                 `/v1/event/${id}/reject/${p.id}`,
                               )
                             }
                           >
-                            Rechazar
+                            Rebutjar
                           </Button>
                         )}
                       </div>
@@ -293,16 +293,16 @@ export function EventDetail({
               </TableBody>
             </Table>
           ) : (
-            <EmptyBox title="Sin inscripciones que mostrar">
-              Las solicitudes de los participantes aparecerán aquí.
+            <EmptyBox title="No hi ha inscripcions per mostrar">
+              Les sol·licituds dels participants apareixeran aquí.
             </EmptyBox>
           )}
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
-          <h2>Equipos inscritos</h2>
+          <h2>Equips inscrits</h2>
           <p className="text-sm text-muted-foreground">
-            El rechazo del equipo afecta solo a miembros no aceptados. Para
-            cambiar una aceptación, retírala primero en Inscripciones.
+            El rebuig de l'equip només afecta els membres no acceptats. Per
+            canviar una acceptació, retira-la primer a Inscripcions.
           </p>
           {teams.length ? (
             teams.map((g) => (
@@ -313,40 +313,40 @@ export function EventDetail({
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
                   <p>
-                    {g.members.map((m) => m.name).join(", ") || "Sin miembros"}
+                    {g.members.map((m) => m.name).join(", ") || "Sense membres"}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() =>
                         confirm(
-                          `Aceptar al equipo ${g.name}`,
+                          `Acceptar l'equip ${g.name}`,
                           `/v1/event/${id}/acceptgroup/${g.id}`,
                         )
                       }
                     >
-                      Aceptar equipo
+                      Acceptar l'equip
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() =>
                         confirm(
-                          `Rechazar al equipo ${g.name}`,
+                          `Rebutjar l'equip ${g.name}`,
                           `/v1/event/${id}/rejectgroup/${g.id}`,
                         )
                       }
                     >
-                      Rechazar pendientes
+                      Rebutjar pendents
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ))
           ) : (
-            <EmptyBox title="Todavía no hay equipos" />
+            <EmptyBox title="Encara no hi ha equips" />
           )}
         </TabsContent>
         <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
-          <h2>Patrocinadores del evento</h2>
+          <h2>Patrocinadors de l'esdeveniment</h2>
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
@@ -361,7 +361,7 @@ export function EventDetail({
           >
             <Field className="w-auto">
               <FieldLabel htmlFor="company-select">
-                Añadir empresa existente
+                Afegir una empresa existent
               </FieldLabel>
               <NativeSelect
                 id="company-select"
@@ -384,15 +384,15 @@ export function EventDetail({
             <Button disabled={busy || !companyId}>Vincular patrocinador</Button>
           </form>
           <p className="text-sm text-muted-foreground">
-            Puedes crear nuevas empresas en la sección Empresas del menú.
+            Pots crear empreses noves a la secció Empreses del menú.
           </p>
           {sponsors.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Nivel</TableHead>
-                  <TableHead>Acciones</TableHead>
+                  <TableHead>Nivell</TableHead>
+                  <TableHead>Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -420,24 +420,24 @@ export function EventDetail({
               </TableBody>
             </Table>
           ) : (
-            <EmptyBox title="Sin patrocinadores vinculados" />
+            <EmptyBox title="Sense patrocinadors vinculats" />
           )}
         </TabsContent>
         <TabsContent value="meals" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
-            <h2>Comidas</h2>
+            <h2>Àpats</h2>
             <Button onClick={() => setMealEditor("new")}>
               <Plus data-icon="inline-start" />
-              Crear comida
+              Crear àpat
             </Button>
           </div>
           {meals.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Acciones</TableHead>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Descripció</TableHead>
+                  <TableHead>Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -446,7 +446,7 @@ export function EventDetail({
                     <TableCell>{m.name}</TableCell>
                     <TableCell>{m.description}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -474,16 +474,16 @@ export function EventDetail({
               </TableBody>
             </Table>
           ) : (
-            <EmptyBox title="Planifica las comidas de esta edición" />
+            <EmptyBox title="Planifica els àpats d'aquesta edició" />
           )}
         </TabsContent>
         <TabsContent value="checkin" className="pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Registrar llegada</CardTitle>
+              <CardTitle>Registrar l'arribada</CardTitle>
               <CardDescription>
-                Introduce el código de un participante aceptado para registrar
-                su asistencia.
+                Introdueix el codi d'un participant acceptat per registrar-ne
+                l'assistència.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -499,7 +499,7 @@ export function EventDetail({
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="checkin-code">
-                      Código del participante
+                      Codi del participant
                     </FieldLabel>
                     <Input
                       id="checkin-code"
@@ -510,7 +510,7 @@ export function EventDetail({
                   </Field>
                 </FieldGroup>
                 <Button disabled={busy || !code.trim()}>
-                  Registrar llegada
+                  Registrar l'arribada
                 </Button>
               </form>
             </CardContent>
@@ -519,29 +519,27 @@ export function EventDetail({
         <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Acerca de esta edición</CardTitle>
+              <CardTitle>Sobre aquesta edició</CardTitle>
               <CardDescription>
-                {event.description || "Sin descripción"}
+                {event.description || "Sense descripció"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <dt className="text-sm text-muted-foreground">
-                    Personas por equipo
+                    Persones per equip
                   </dt>
                   <dd>{event.max_group_size}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">
-                    Patrocinadores máximos
+                    Màxim de patrocinadors
                   </dt>
                   <dd>{event.max_sponsors}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-muted-foreground">
-                    Precio (API)
-                  </dt>
+                  <dt className="text-sm text-muted-foreground">Preu (API)</dt>
                   <dd>{event.price}</dd>
                 </div>
               </dl>
@@ -554,7 +552,7 @@ export function EventDetail({
               setConfirmation({
                 title: `Eliminar ${event.name}`,
                 description:
-                  "Se eliminará el evento. Esta acción no se puede deshacer y puede fallar si tiene datos asociados.",
+                  "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
                 run: async () => {
                   await request(`/v1/event/${id}`, "DELETE");
                   await reloadEvents();
@@ -563,7 +561,7 @@ export function EventDetail({
               })
             }
           >
-            Eliminar evento
+            Eliminar l'esdeveniment
           </Button>
         </TabsContent>
       </Tabs>
@@ -579,18 +577,18 @@ export function EventDetail({
       )}
       {mealEditor && (
         <EditDialog
-          title={mealEditor === "new" ? "Crear comida" : "Editar comida"}
-          description="Configura una comida para este evento."
+          title={mealEditor === "new" ? "Crear àpat" : "Editar l'àpat"}
+          description="Configura un àpat per a aquest esdeveniment."
           fields={[
             {
               name: "name",
-              label: "Nombre",
+              label: "Nom",
               required: true,
               value: mealEditor === "new" ? "" : mealEditor.name,
             },
             {
               name: "description",
-              label: "Descripción",
+              label: "Descripció",
               value: mealEditor === "new" ? "" : mealEditor.description,
             },
           ]}

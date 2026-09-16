@@ -46,10 +46,11 @@ export function Companies() {
     <div className="flex flex-col gap-6">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">COLABORADORES</p>
-          <h1>Empresas</h1>
+          <p className="eyebrow">COL·LABORADORS</p>
+          <h1>Empreses</h1>
           <p className="text-muted-foreground">
-            Gestiona las empresas y vincúlalas a cada edición desde su evento.
+            Gestiona les empreses i vincula-les a cada edició des del seu
+            esdeveniment.
           </p>
         </div>
         <Button onClick={() => setEdit("new")}>
@@ -59,8 +60,8 @@ export function Companies() {
       </div>
       <ErrorBox error={error} />
       <Input
-        aria-label="Buscar empresas"
-        placeholder="Buscar empresa…"
+        aria-label="Cercar empreses"
+        placeholder="Cercar empresa…"
         className="sm:max-w-xs"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -73,9 +74,9 @@ export function Companies() {
             <TableRow>
               <TableHead>Empresa</TableHead>
               <TableHead>Web</TableHead>
-              <TableHead>Nivel</TableHead>
-              <TableHead>Teléfono</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead>Nivell</TableHead>
+              <TableHead>Telèfon</TableHead>
+              <TableHead>Accions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,7 +85,7 @@ export function Companies() {
                 <TableCell>{c.name}</TableCell>
                 <TableCell>{c.website || "—"}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">Nivel {c.tier}</Badge>
+                  <Badge variant="secondary">Nivell {c.tier}</Badge>
                 </TableCell>
                 <TableCell>{c.telephone || "—"}</TableCell>
                 <TableCell>
@@ -110,26 +111,26 @@ export function Companies() {
           </TableBody>
         </Table>
       ) : (
-        <EmptyBox title="Sin empresas que mostrar" />
+        <EmptyBox title="No hi ha empreses per mostrar" />
       )}
       {edit && (
         <EditDialog
           title={edit === "new" ? "Crear empresa" : "Editar empresa"}
-          description="Datos de contacto y nivel de patrocinio."
+          description="Dades de contacte i nivell de patrocini."
           fields={[
-            { name: "name", label: "Nombre", required: true },
+            { name: "name", label: "Nom", required: true },
             { name: "website", label: "Web", type: "url" },
             {
               name: "tier",
-              label: "Nivel",
+              label: "Nivell",
               type: "number",
               min: 0,
               required: true,
             },
-            { name: "telephone", label: "Teléfono" },
-            { name: "address", label: "Dirección" },
+            { name: "telephone", label: "Telèfon" },
+            { name: "address", label: "Adreça" },
             { name: "linkdin", label: "LinkedIn", type: "url" },
-            { name: "description", label: "Descripción", multiline: true },
+            { name: "description", label: "Descripció", multiline: true },
           ].map((f) => ({
             ...f,
             value:
@@ -157,7 +158,7 @@ export function Companies() {
       {remove && (
         <ConfirmDialog
           title={`Eliminar ${remove.name}`}
-          description="Se eliminará la empresa. Desvincúlala de sus eventos antes de continuar."
+          description="S'eliminarà l'empresa. Desvincula-la dels seus esdeveniments abans de continuar."
           onClose={() => setRemove(null)}
           onConfirm={async () => {
             await request(`/v1/company/${remove.id}`, "DELETE");

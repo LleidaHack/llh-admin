@@ -34,7 +34,9 @@ describe("API session", () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ detail: "Expired" }), { status: 401 }),
     );
-    await expect(request("/v1/event/all")).rejects.toThrow("Expired");
+    await expect(request("/v1/event/all")).rejects.toThrow(
+      "La sessió ha caducat",
+    );
     expect(hasSession()).toBe(false);
     expect(window.dispatchEvent).toHaveBeenCalledOnce();
   });
@@ -48,7 +50,7 @@ describe("API session", () => {
       ),
     );
     await expect(request("/v1/event/", "POST", {})).rejects.toThrow(
-      "name: Field required",
+      "Nom: Aquest camp és obligatori.",
     );
   });
   it("rejects participant accounts from the organizer panel", async () => {
@@ -58,7 +60,7 @@ describe("API session", () => {
       )
       .mockResolvedValueOnce(new Response(JSON.stringify({ type: "hacker" })));
     await expect(login("hacker@example.test", "password")).rejects.toThrow(
-      "organizador",
+      "organitzador",
     );
     expect(hasSession()).toBe(false);
   });
