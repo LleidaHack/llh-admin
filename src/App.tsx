@@ -7,7 +7,6 @@ import {
   ArrowRight,
   RefreshCw,
   ExternalLink,
-  Command,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,10 +41,8 @@ function Login({
     <div className="login-layout">
       <section className="login-story">
         <div className="brand">
-          <span className="brand-icon">
-            <Command />
-          </span>
-          LleidaHack <span className="font-normal opacity-60">/ admin</span>
+          <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
+          <span className="brand-label">/ admin</span>
         </div>
         <div>
           <p className="eyebrow">DE LA IDEA AL ENCUENTRO</p>
@@ -59,9 +56,7 @@ function Login({
             preparar lo que viene.
           </p>
         </div>
-        <span className="text-sm opacity-60">
-          Panel de organización · LleidaHack
-        </span>
+        <span className="text-sm">Panel de organización · LleidaHack</span>
       </section>
       <main className="login-form">
         <div className="flex w-full max-w-sm flex-col gap-7">
@@ -202,10 +197,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-icon">
-            <Command />
-          </span>
-          LleidaHack
+          <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
         </div>
         <p className="nav-caption">ESPACIO DE ORGANIZACIÓN</p>
         <nav aria-label="Navegación principal">

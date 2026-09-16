@@ -131,7 +131,7 @@ export function Events({
   );
   return (
     <div className="flex flex-col gap-7">
-      <div className="page-heading">
+      <div className="page-heading events-intro">
         <div>
           <p className="eyebrow">TU PRÓXIMA EDICIÓN</p>
           <h1>Eventos</h1>
@@ -139,7 +139,7 @@ export function Events({
             Todo lo que necesitas para poner una hackathon en marcha.
           </p>
         </div>
-        <Button onClick={() => setCreate(true)}>
+        <Button variant="secondary" onClick={() => setCreate(true)}>
           <Plus data-icon="inline-start" />
           Crear evento
         </Button>

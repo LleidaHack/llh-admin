@@ -59,3 +59,9 @@ npm run build
 ```
 
 Unit tests cover login/session expiration, access restrictions, API validation messages and event payload validation. Manual browser verification against the isolated backend is recorded in `QA.md`.
+
+## HackEPS visual identity
+
+The provisional panel follows the style-guide screenshot supplied on 2026-09-16: orange (`#ff7430`), charcoal (`#222222`), off-white (`#f7f7f7`), self-hosted Space Mono 400/700 and outline icons. Color values are approximations from the screenshot and existing project styles, not exported Figma variables. Text sizes are adapted to administration screens rather than copying the guide's 98px desktop display heading.
+
+`public/brand/lleidahack.svg` and `pattern-light.png` are unchanged copies of the existing LleidaHack frontend assets (`src/assets/img/logo_text_llh.svg` and `src/imgs/patron_imagen.png`). This standalone repository does not require that frontend at runtime. The white pattern separates card sections; data, errors and forms remain on neutral surfaces. Font files and their license are supplied by `@fontsource/space-mono`. Theme tokens live in `src/index.css`.

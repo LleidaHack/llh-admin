@@ -33,3 +33,7 @@ Two existing backend defects blocked the management flows and were fixed separat
 The backend's team rejection endpoint skips already accepted members. The UI explains this and offers withdrawal of acceptance in the registrations table before rejection. This panel does not claim to cover every backend endpoint; scope and migration notes are in README.md.
 
 The labeled demo event and test participant remain in the isolated database for exploration. Temporary company, meal and second event were removed through the UI. No real emails were delivered.
+
+## Visual identity update — 2026-09-16
+
+Applied the user-supplied style guide to login, navigation, events, forms, tables and shared shadcn components. Verified at 1440 × 1000 and 390 × 844; computed body font is Space Mono, mobile document width is 390px, and the create-event dialog scrolls within the viewport. Login against the local backend succeeds. Build and all 11 frontend tests pass. Backend request logic is unchanged.
