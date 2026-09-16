@@ -52,7 +52,8 @@ function Login({
       <main className="login-form">
         <div className="flex w-full max-w-sm flex-col gap-7">
           <Badge variant="outline" className="self-start">
-            ACCÉS D'ORGANITZADORS
+            ACCÉS D'ORGANITZADORS ·{" "}
+            {import.meta.env.VITE_ENVIRONMENT_LABEL || "Local"}
           </Badge>
           <div>
             <h2 className="login-title">Et donem la benvinguda</h2>
@@ -219,7 +220,7 @@ export default function App() {
           </p>
           <Button variant="ghost" asChild className="mt-4 justify-start">
             <a
-              href="http://127.0.0.1:8000/docs"
+              href={`${import.meta.env.VITE_API_ORIGIN || "http://127.0.0.1:8000"}/docs`}
               target="_blank"
               rel="noreferrer"
             >
@@ -235,7 +236,9 @@ export default function App() {
             <span className="text-sm text-muted-foreground">
               Panell de gestió
             </span>
-            <Badge variant="outline">Provisional</Badge>
+            <Badge variant="outline">
+              {import.meta.env.VITE_ENVIRONMENT_LABEL || "Local"}
+            </Badge>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-sm sm:block">{profile.name}</span>

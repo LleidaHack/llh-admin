@@ -44,14 +44,15 @@ export type Meal = {
   event_id: number;
 };
 const base = import.meta.env.VITE_API_BASE || "/api";
-let accessToken = sessionStorage.getItem("lh-access") || "";
+const sessionKey = `lh-access:${import.meta.env.VITE_API_ORIGIN || base}`;
+let accessToken = sessionStorage.getItem(sessionKey) || "";
 export function clearSession() {
   accessToken = "";
-  sessionStorage.removeItem("lh-access");
+  sessionStorage.removeItem(sessionKey);
 }
 function saveToken(token: string) {
   accessToken = token;
-  sessionStorage.setItem("lh-access", token);
+  sessionStorage.setItem(sessionKey, token);
 }
 export class ApiError extends Error {
   status: number;
