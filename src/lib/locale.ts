@@ -85,6 +85,8 @@ const messages: Record<string, string> = {
   "hacker already banned": "Aquest participant ja té l'accés bloquejat.",
   "hacker already unbanned": "Aquest participant ja té l'accés desbloquejat.",
   "hacker already eating": "Aquest participant ja té l'àpat registrat.",
+  "email verification required":
+    "Cal verificar el correu electrònic abans d’iniciar sessió. Revisa la safata d’entrada i el correu brossa.",
   "user already verified": "Aquest compte ja està verificat.",
   "user already confirmed assistance":
     "Aquest usuari ja ha confirmat l'assistència.",
