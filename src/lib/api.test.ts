@@ -65,3 +65,14 @@ describe("API session", () => {
     expect(hasSession()).toBe(false);
   });
 });
+
+it("preserves the verification error code without starting a session", async () => {
+  vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+    message: "Email verification required", code: "EMAIL_NOT_VERIFIED",
+  }), { status: 401 }));
+  await expect(login("pending@example.test", "password")).rejects.toMatchObject({
+    code: "EMAIL_NOT_VERIFIED", status: 401,
+  });
+  expect(hasSession()).toBe(false);
+  expect(window.dispatchEvent).not.toHaveBeenCalled();
+});
