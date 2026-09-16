@@ -301,7 +301,18 @@ h2 {
   padding: 50px 60px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   border-right: 1px solid var(--brand-ink);
+}
+.login-story .brand {
+  width: min(100%, 440px);
+}
+.login-story .brand-wordmark {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 155 / 38;
+  mask-position: center;
 }
 .login-form {
   display: flex;
@@ -433,9 +444,13 @@ h2 {
   }
   .login-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .login-story .brand {
+    width: min(72%, 280px);
   }
   .login-story {
-    padding: 28px 24px;
+    padding: 48px 24px;
     border-right: 0;
     border-bottom: 1px solid var(--brand-ink);
   }
