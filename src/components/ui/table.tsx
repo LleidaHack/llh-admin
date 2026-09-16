@@ -4,6 +4,9 @@ import { cn } from "cn";
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
+      tabIndex={0}
+      role="region"
+      aria-label="Taula de dades amb desplaçament horitzontal"
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
     >

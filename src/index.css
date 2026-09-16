@@ -151,6 +151,7 @@ h2 {
   position: sticky;
   top: 0;
   height: 100dvh;
+  overflow-y: auto;
   --secondary: var(--brand-orange);
   --secondary-foreground: var(--brand-ink);
   --muted-foreground: #b8b8b8;
@@ -334,6 +335,26 @@ h2 {
   font-size: 1.85rem;
   letter-spacing: -0.05em;
 }
+[data-slot="tabs-trigger"] {
+  height: auto;
+  min-height: 36px;
+}
+[data-slot="dialog-content"] {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+[data-slot="dialog-header"] {
+  padding-right: 36px;
+}
+.page-heading > *,
+.login-layout > *,
+[data-slot="field"] {
+  min-width: 0;
+}
+.main-content {
+  overflow-wrap: anywhere;
+}
 [data-slot="tabs-list"] {
   height: auto;
   flex-wrap: wrap;
@@ -465,5 +486,21 @@ h2 {
 @media (max-width: 360px) {
   .nav-button svg {
     display: none;
+  }
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="tabs-trigger"] {
+    min-height: 44px;
+  }
+  [data-slot="button"][data-size^="icon"] {
+    min-width: 44px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
   }
 }

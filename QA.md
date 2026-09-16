@@ -41,3 +41,20 @@ Applied the user-supplied style guide to login, navigation, events, forms, table
 ## Catalan localization — 2026-09-16
 
 17 frontend tests pass, including API error translation, validation-field labels, unknown-error fallback, account types and Catalan month formatting. Browser checks cover required-field validation, incorrect-password feedback, successful login, event creation dialog and mobile layout. Interface labels and document language are Catalan; existing user-entered event/account data is preserved.
+
+## Responsive review — 2026-09-16
+
+Checked the login, events list, all six event-management tabs, companies, users,
+and shared create/edit dialogs at 320×740, 390×844, 768×1024, 1024×768,
+1440×900 and 844×390 in Chromium with the local backend. Wide tables remain
+inside horizontally scrolling containers rather than widening the document.
+
+Fixed wrapped event tabs overlapping their content at tablet widths by removing
+percentage-based trigger heights. Added scrolling for short-screen sidebars and
+all dialogs, room for dialog close buttons, and 44px touch controls with 16px form
+text on mobile/coarse-pointer devices. Table containers now accept keyboard focus
+and have an accessible label. User-generated text can wrap inside page content.
+
+Production build and all 17 tests pass. Lint has no errors and the same six
+pre-existing warnings. These checks use browser viewport emulation, not physical
+iOS/Android devices.
