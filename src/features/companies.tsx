@@ -142,7 +142,7 @@ export function Companies() {
                 ? f.name === "tier"
                   ? 0
                   : ""
-                : edit[f.name as keyof Company],
+                : (edit[f.name as keyof Company] ?? ""),
           }))}
           onClose={() => setEdit(null)}
           onSave={async (f) => {
