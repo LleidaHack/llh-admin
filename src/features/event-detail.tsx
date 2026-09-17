@@ -36,6 +36,7 @@ import { EventEditor } from "./events";
 import {
   request,
   errorMessage,
+  fetchCvUrl,
   type EventRecord,
   type Participant,
   type Company,
@@ -116,6 +117,14 @@ export function EventDetail({
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+  async function openCv(hackerId: number) {
+    try {
+      const url = await fetchCvUrl(hackerId);
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      toast.error(errorMessage(e));
     }
   }
   const confirm = (title: string, path: string, method = "PUT") =>
@@ -244,6 +253,13 @@ export function EventDetail({
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openCv(p.id)}
+                        >
+                          CV
+                        </Button>
                         {p.status !== "accepted" && (
                           <Button
                             size="sm"
