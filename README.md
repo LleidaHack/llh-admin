@@ -75,18 +75,20 @@ The provisional panel follows the style-guide screenshot supplied on 2026-09-16:
 
 The panel uses Catalan throughout, with `lang="ca"` and `ca-ES` dates. Native form validation messages, common API errors, accessible dialog/toast labels and account/status labels are localized. Unknown backend errors use a Catalan fallback with the HTTP status; they do not display untranslated internal messages. User-entered content and API field names remain unchanged. The translation helpers are in `src/lib/locale.ts`.
 
-## Testing API
+## Remote API
 
-Set these values in ignored `.env.local`, then restart Vite:
+To point the panel at a remote backend, set these values in the ignored
+`.env.local` (replace the example host with your own backend URL), then restart
+the dev server:
 
 ```env
-API_TARGET=https://backend.testing.lleidahack.dev
-VITE_API_ORIGIN=https://backend.testing.lleidahack.dev
-VITE_ENVIRONMENT_LABEL=Testing
+API_TARGET=https://backend.example.com
+NEXT_PUBLIC_API_ORIGIN=https://backend.example.com
+NEXT_PUBLIC_ENVIRONMENT_LABEL=Staging
 ```
 
 Open the same local panel at http://127.0.0.1:5175 and sign in using an organizer
-account from testing. Local demo credentials do not apply. Sessions are isolated
-by API origin, and the login/header show the selected environment. Requests go
-through the local Vite proxy over verified HTTPS to testing. This configuration
+account from that environment. Local demo credentials do not apply. Sessions are
+isolated by API origin, and the login/header show the selected environment.
+Requests go through the local proxy over verified HTTPS. This configuration
 does not deploy the frontend or change the standalone local backend.
