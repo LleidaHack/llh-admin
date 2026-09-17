@@ -1,17 +1,17 @@
 # LleidaHack Admin (provisional)
 
-An independent organizer frontend built with React, TypeScript, Vite, Tailwind CSS and official shadcn/ui components (Radix Nova). It uses the existing LleidaHack backend API. No HackEPS frontend files are required or modified.
+An independent organizer frontend built with React, TypeScript, Next.js (App Router), Tailwind CSS and official shadcn/ui components (Radix Nova). It uses the existing LleidaHack backend API. No HackEPS frontend files are required or modified.
 
 ## Run locally
 
-Requires Node.js 22.12+ (tested on Node 25), npm and the backend running on port 8000.
+Requires Node.js 20.9+ (tested on Node 25), npm and the backend running on port 8000.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5175. The Vite server binds to loopback and proxies `/api` to `http://127.0.0.1:8000`. To use another backend, copy `.env.example` to `.env.local` and set `API_TARGET`, then restart Vite.
+Open http://127.0.0.1:5175. The Next.js dev server binds to loopback and proxies `/api` to `http://127.0.0.1:8000` through a Route Handler at `src/app/api/[...path]/route.ts`. The proxy preserves trailing slashes (the backend's FastAPI routes require them). To use another backend, copy `.env.example` to `.env.local` and set `API_TARGET`, then restart the dev server.
 
 For the isolated backend environment:
 
@@ -29,9 +29,14 @@ Docker must be running. Sign in with `organizer@example.test`; read `organizer_p
 - Event registrations: search, accept, reject and withdraw acceptance.
 - Event teams: view members, accept/reject an entire team.
 - Companies: create/edit/delete and link/unlink event sponsors.
-- Meals: create/edit/delete for an event.
+- Meals: create/edit/delete for an event, and register a meal ticket by participant code.
 - Check-in by participant code.
+- Event statistics and unregistered-participant count (server-side).
+- Event logistics: t-shirt sizes and food restrictions.
+- Export accepted-participant emails, and send reminder / resend-acceptance mails (confirmed, real emails).
 - User directory, lookup by nickname/email and block/unblock participant access.
+
+Each top-level section has a dedicated route (`/events`, `/events/[id]`, `/companies`, `/users`, `/login`). Navigation is real URL routing, so links, back/forward and refresh work.
 
 All lists come from the API, including empty states. Destructive actions require a confirmation. Backend validation and permission errors are displayed. Participant registration itself remains in the participant application/API; this panel manages submitted applications.
 

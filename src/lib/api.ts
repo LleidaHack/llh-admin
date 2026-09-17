@@ -30,6 +30,28 @@ export type Participant = {
   email: string;
   status: string;
   nickname: string;
+  // Optional application fields the backend may include in the participants list.
+  description?: string | null;
+  cv?: string | null;
+};
+// Full hacker profile from GET /v1/hacker/{hackerId} (HackerGetAll). All optional
+// because visibility depends on the caller's permissions and the account's data.
+export type HackerProfile = {
+  id?: number;
+  name?: string;
+  nickname?: string;
+  email?: string;
+  telephone?: string;
+  cv?: string | null;
+  github?: string | null;
+  linkedin?: string | null;
+  studies?: string | null;
+  study_center?: string | null;
+  location?: string | null;
+  how_did_you_meet_us?: string | null;
+  food_restrictions?: string | null;
+  shirt_size?: string | null;
+  description?: string | null;
 };
 export type Team = {
   id: number;
@@ -43,9 +65,13 @@ export type Meal = {
   description: string;
   event_id: number;
 };
-const base = import.meta.env.VITE_API_BASE || "/api";
-const sessionKey = `lh-access:${import.meta.env.VITE_API_ORIGIN || base}`;
-let accessToken = sessionStorage.getItem(sessionKey) || "";
+const base = process.env.NEXT_PUBLIC_API_BASE || "/api";
+const sessionKey = `lh-access:${process.env.NEXT_PUBLIC_API_ORIGIN || base}`;
+// sessionStorage is browser-only; guard so this module is safe to import on the server.
+let accessToken =
+  typeof sessionStorage !== "undefined"
+    ? sessionStorage.getItem(sessionKey) || ""
+    : "";
 export function clearSession() {
   accessToken = "";
   sessionStorage.removeItem(sessionKey);

@@ -4,19 +4,20 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "next dev -H 127.0.0.1 -p 5175",
+    "build": "next build",
+    "start": "next start -H 127.0.0.1 -p 5175",
     "lint": "oxlint",
-    "preview": "vite preview",
     "test": "vitest run",
-    "format": "prettier --write src vite.config.ts"
+    "format": "prettier --write src next.config.ts vitest.config.ts"
   },
   "dependencies": {
     "@fontsource/space-mono": "^5.3.0",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "lucide-react": "^1.46.0",
+    "next": "^16.3.5",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
@@ -30,7 +31,6 @@
     "@types/node": "^24.13.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.7",
     "typescript": "~6.0.2",
