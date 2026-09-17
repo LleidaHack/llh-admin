@@ -145,10 +145,6 @@ export default function PanelLayout({
           </div>
         </header>
         <main className="main-content">{children}</main>
-        <footer className="workspace-footer">
-          LleidaHack · Organització d&apos;esdeveniments
-          <span>Una comunitat. Moltes idees.</span>
-        </footer>
       </div>
     </div>
   );

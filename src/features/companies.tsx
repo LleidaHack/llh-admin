@@ -25,7 +25,11 @@ export function Companies() {
     [loading, setLoading] = useState(true),
     [edit, setEdit] = useState<Company | "new" | null>(null),
     [remove, setRemove] = useState<Company | null>(null),
+    [logo, setLogo] = useState<string | null>(null),
     [query, setQuery] = useState("");
+  useEffect(() => {
+    setLogo(edit && edit !== "new" ? (edit.image ?? null) : null);
+  }, [edit]);
   async function load() {
     try {
       setItems(await request("/v1/company/all"));
@@ -145,6 +149,7 @@ export function Companies() {
             const payload = {
               ...Object.fromEntries(f.entries()),
               tier: Number(f.get("tier")),
+              image: logo ?? "",
             };
             await request(
               edit === "new" ? "/v1/company/" : `/v1/company/${edit.id}`,
@@ -153,7 +158,41 @@ export function Companies() {
             );
             await load();
           }}
-        />
+        >
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium">Logo</span>
+            <div className="flex items-center gap-3">
+              {logo && (
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="h-16 w-16 rounded border bg-white object-contain"
+                />
+              )}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setLogo(reader.result as string);
+                  reader.readAsDataURL(file);
+                }}
+              />
+              {logo && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogo(null)}
+                >
+                  Treure
+                </Button>
+              )}
+            </div>
+          </div>
+        </EditDialog>
       )}
       {remove && (
         <ConfirmDialog

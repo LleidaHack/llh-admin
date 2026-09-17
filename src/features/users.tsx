@@ -35,6 +35,7 @@ type User = {
   is_verified?: boolean;
   code?: string;
   telephone?: string;
+  image?: string | null;
 };
 export function Users() {
   const [items, setItems] = useState<User[]>([]),
@@ -112,6 +113,13 @@ export function Users() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-3">
+            {selected.image && (
+              <img
+                src={selected.image}
+                alt={`Foto de ${selected.name}`}
+                className="h-20 w-20 rounded-full border object-cover"
+              />
+            )}
             <Badge variant="secondary">{accountType(selected.type)}</Badge>
             <Badge variant="outline">
               {selected.is_verified ? "Correu verificat" : "Sense verificar"}
@@ -169,7 +177,18 @@ export function Users() {
               )
               .map((u) => (
                 <TableRow key={u.nickname}>
-                  <TableCell>{u.name}</TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-2">
+                      {u.image && (
+                        <img
+                          src={u.image}
+                          alt=""
+                          className="h-7 w-7 rounded-full border object-cover"
+                        />
+                      )}
+                      {u.name}
+                    </span>
+                  </TableCell>
                   <TableCell>{u.nickname}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{accountType(u.type)}</Badge>
