@@ -133,3 +133,24 @@ export async function login(email: string, password: string) {
 export const hasSession = () => Boolean(accessToken);
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "S'ha produït un error inesperat.";
+// Fetches a hacker's CV as a PDF and returns an object URL to open/embed it.
+// Uses a raw fetch (not request<T>) because the body is a binary blob, not JSON.
+export async function fetchCvUrl(hackerId: number): Promise<string> {
+  const response = await fetch(`${base}/v1/hacker/${hackerId}/cv`, {
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      window.dispatchEvent(new Event("session-expired"));
+    }
+    throw new ApiError(
+      response.status,
+      response.status === 404
+        ? "Aquest hacker no té CV."
+        : serverError(undefined, response.status),
+    );
+  }
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
