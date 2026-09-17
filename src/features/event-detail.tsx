@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Pencil, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, RefreshCw, MoreHorizontal } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +78,8 @@ export function EventDetail({
     description: string;
     run: () => Promise<void>;
   } | null>(null);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [mailFor, setMailFor] = useState<Participant | null>(null);
   const load = useCallback(async () => {
     try {
       const results = await Promise.allSettled([
@@ -122,7 +130,34 @@ export function EventDetail({
   async function openCv(hackerId: number) {
     try {
       const url = await fetchCvUrl(hackerId);
-      window.open(url, "_blank", "noopener");
+      setCvUrl(url); // mostra el PDF en un modal inline (evita el bloqueig de popups)
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  }
+  function closeCv() {
+    if (cvUrl) URL.revokeObjectURL(cvUrl);
+    setCvUrl(null);
+  }
+  async function resendMail(
+    kind: "accepted" | "reset" | "verify",
+    p: Participant,
+  ) {
+    try {
+      if (kind === "accepted")
+        await request(`/v1/event/${id}/resend-accepted-mail/${p.id}/`, "GET");
+      else if (kind === "reset")
+        await request(
+          `/v1/auth/reset-password?email=${encodeURIComponent(p.email)}`,
+          "POST",
+        );
+      else
+        await request(
+          `/v1/auth/resend-verification?email=${encodeURIComponent(p.email)}`,
+          "POST",
+        );
+      toast.success("Correu reenviat");
+      setMailFor(null);
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -302,6 +337,14 @@ export function EventDetail({
                             Rebutjar
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setMailFor(p)}
+                          aria-label="Més accions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -633,6 +676,50 @@ export function EventDetail({
           onClose={() => setConfirmation(null)}
         />
       )}
+      <Dialog open={!!cvUrl} onOpenChange={(o) => !o && closeCv()}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>CV</DialogTitle>
+          </DialogHeader>
+          {cvUrl && (
+            <iframe
+              src={cvUrl}
+              title="CV"
+              className="w-full rounded border"
+              style={{ height: "75vh" }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!mailFor} onOpenChange={(o) => !o && setMailFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Reenviar correu{mailFor ? ` a ${mailFor.name}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={() => mailFor && resendMail("accepted", mailFor)}
+            >
+              Correu d'acceptació
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => mailFor && resendMail("reset", mailFor)}
+            >
+              Reset de contrasenya
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => mailFor && resendMail("verify", mailFor)}
+            >
+              Verificació de compte
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
