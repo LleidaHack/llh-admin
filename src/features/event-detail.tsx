@@ -34,6 +34,14 @@ import {
 } from "@/components/shared";
 import { EventEditor } from "./events";
 import {
+  StatisticsTab,
+  LogisticsTab,
+  AcceptedMailsCard,
+  MailActions,
+  MealCheckIn,
+  ParticipantDetailDialog,
+} from "./event-insights";
+import {
   request,
   errorMessage,
   type EventRecord,
@@ -65,6 +73,7 @@ export function EventDetail({
     [mealEditor, setMealEditor] = useState<Meal | "new" | null>(null),
     [query, setQuery] = useState(""),
     [companyId, setCompanyId] = useState(""),
+    [detail, setDetail] = useState<Participant | null>(null),
     [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -196,6 +205,9 @@ export function EventDetail({
           </TabsTrigger>
           <TabsTrigger value="meals">Àpats ({meals.length})</TabsTrigger>
           <TabsTrigger value="checkin">Assistència</TabsTrigger>
+          <TabsTrigger value="comms">Comunicacions</TabsTrigger>
+          <TabsTrigger value="statistics">Estadístiques</TabsTrigger>
+          <TabsTrigger value="logistics">Logística</TabsTrigger>
           <TabsTrigger value="settings">Informació</TabsTrigger>
         </TabsList>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
@@ -244,6 +256,13 @@ export function EventDetail({
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDetail(p)}
+                        >
+                          Detalls
+                        </Button>
                         {p.status !== "accepted" && (
                           <Button
                             size="sm"
@@ -476,6 +495,7 @@ export function EventDetail({
           ) : (
             <EmptyBox title="Planifica els àpats d'aquesta edició" />
           )}
+          <MealCheckIn meals={meals} />
         </TabsContent>
         <TabsContent value="checkin" className="pt-4">
           <Card>
@@ -515,6 +535,21 @@ export function EventDetail({
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
+          <h2>Comunicacions</h2>
+          <p className="text-sm text-muted-foreground">
+            Exporta correus i envia comunicacions als participants d&apos;aquest
+            esdeveniment.
+          </p>
+          <AcceptedMailsCard id={id} />
+          <MailActions id={id} />
+        </TabsContent>
+        <TabsContent value="statistics" className="pt-4">
+          <StatisticsTab id={id} />
+        </TabsContent>
+        <TabsContent value="logistics" className="pt-4">
+          <LogisticsTab id={id} />
         </TabsContent>
         <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
           <Card>
@@ -615,6 +650,13 @@ export function EventDetail({
           description={confirmation.description}
           onConfirm={confirmation.run}
           onClose={() => setConfirmation(null)}
+        />
+      )}
+      {detail && (
+        <ParticipantDetailDialog
+          eventId={id}
+          participant={detail}
+          onClose={() => setDetail(null)}
         />
       )}
     </div>
