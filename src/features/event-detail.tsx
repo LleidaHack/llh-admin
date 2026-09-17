@@ -58,6 +58,14 @@ import {
   type Team,
 } from "@/lib/api";
 import { dateLabel } from "@/lib/events";
+// Sponsor tiers shared with the HackEPS frontend: 0 = highest.
+const TIERS = [
+  { value: 0, label: "Supreme" },
+  { value: 1, label: "Challenger" },
+  { value: 2, label: "Premium" },
+  { value: 3, label: "Supporter" },
+  { value: 4, label: "Inferior" },
+];
 export function EventDetail({
   id,
   onBack,
@@ -494,14 +502,60 @@ export function EventDetail({
                 <TableRow>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Nivell</TableHead>
+                  <TableHead>Ordre</TableHead>
                   <TableHead>Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sponsors.map((c) => (
+                {sponsors.map((c, index) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.name}</TableCell>
-                    <TableCell>{c.tier}</TableCell>
+                    <TableCell>
+                      <NativeSelect
+                        aria-label={`Nivell de ${c.name}`}
+                        value={String(c.tier ?? 0)}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void action(
+                            `/v1/event/${id}/sponsors/${c.id}`,
+                            "PATCH",
+                            {
+                              tier: Number(e.target.value),
+                              display_order: index,
+                            },
+                          )
+                        }
+                      >
+                        {TIERS.map((t) => (
+                          <NativeSelectOption
+                            key={t.value}
+                            value={String(t.value)}
+                          >
+                            {t.label}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        key={`order-${c.id}-${index}`}
+                        type="number"
+                        min={0}
+                        className="w-20"
+                        aria-label={`Ordre de ${c.name}`}
+                        defaultValue={index}
+                        disabled={busy}
+                        onBlur={(e) => {
+                          const order = Number(e.target.value);
+                          if (order !== index)
+                            void action(
+                              `/v1/event/${id}/sponsors/${c.id}`,
+                              "PATCH",
+                              { tier: c.tier ?? 0, display_order: order },
+                            );
+                        }}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="outline"
