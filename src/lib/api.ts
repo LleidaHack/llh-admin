@@ -66,6 +66,29 @@ export type Meal = {
   description: string;
   event_id: number;
 };
+export type TicketsStatus = {
+  eligible: number;
+  sent: number;
+  pending: number;
+  running: boolean;
+  progress: {
+    running?: boolean;
+    sent?: number;
+    failed?: number;
+    total?: number;
+    estimated_remaining_seconds?: number | null;
+  };
+};
+export type Voucher = {
+  id: number;
+  event_id: number;
+  code: string;
+  hacker_id: number | null;
+  hacker: { id: number; name: string; nickname?: string | null; email?: string | null } | null;
+  created_at: string | null;
+  assigned_at: string | null;
+};
+export type VoucherSummary = { total: number; assigned: number; unassigned: number };
 const base = process.env.NEXT_PUBLIC_API_BASE || "/api";
 const sessionKey = `lh-access:${process.env.NEXT_PUBLIC_API_ORIGIN || base}`;
 // sessionStorage is browser-only; guard so this module is safe to import on the server.
@@ -160,21 +183,24 @@ export async function login(email: string, password: string) {
 export const hasSession = () => Boolean(accessToken);
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "S'ha produït un error inesperat.";
-// Fetches a hacker's CV as a PDF and returns an object URL to open/embed it.
-// Raw fetch (not request<T>) because the body is a binary blob, not JSON.
-export async function fetchCvUrl(hackerId: number): Promise<string> {
-  const response = await fetch(`${base}/v1/hacker/${hackerId}/cv`, {
+// Fetches a binary endpoint (PDF, CSV, PNG) and returns an object URL for it.
+// Raw fetch (not request<T>) because the body is a blob, not JSON.
+export async function fetchFileUrl(path: string, notFound?: string): Promise<string> {
+  const response = await fetch(`${base}${path}`, {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
   if (!response.ok) {
     if (response.status === 401) clearSession();
     throw new ApiError(
       response.status,
-      response.status === 404
-        ? "Aquest hacker no té CV."
+      response.status === 404 && notFound
+        ? notFound
         : serverError(undefined, response.status),
     );
   }
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 }
+// Fetches a hacker's CV as a PDF and returns an object URL to open/embed it.
+export const fetchCvUrl = (hackerId: number) =>
+  fetchFileUrl(`/v1/hacker/${hackerId}/cv`, "Aquest hacker no té CV.");

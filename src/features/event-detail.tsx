@@ -47,6 +47,7 @@ import {
   MealCheckIn,
   ParticipantDetailDialog,
 } from "./event-insights";
+import { TicketsCard, VouchersCard } from "./event-checkin";
 import {
   request,
   errorMessage,
@@ -634,7 +635,8 @@ export function EventDetail({
           )}
           <MealCheckIn meals={meals} />
         </TabsContent>
-        <TabsContent value="checkin" className="pt-4">
+        <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
+          <VouchersCard id={id} />
           <Card>
             <CardHeader>
               <CardTitle>Registrar l'arribada</CardTitle>
@@ -679,6 +681,7 @@ export function EventDetail({
             Exporta correus i envia comunicacions als participants d&apos;aquest
             esdeveniment.
           </p>
+          <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
         </TabsContent>
