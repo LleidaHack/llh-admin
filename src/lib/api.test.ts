@@ -65,3 +65,55 @@ describe("API session", () => {
     expect(hasSession()).toBe(false);
   });
 });
+
+describe("legacy permission errors", () => {
+  async function organizerLogin() {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "valid-token" })),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 1, type: "lleida_hacker" })),
+      );
+    await login("organizer@example.test", "password");
+  }
+  it("keeps a valid session when statistics denies admin permissions", async () => {
+    await organizerLogin();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Not authorized" }), {
+          status: 401,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 1, type: "lleida_hacker" })),
+      );
+    await expect(
+      request("/v1/event/1/count_unregistered_hackers/"),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(hasSession()).toBe(true);
+    expect(window.dispatchEvent).not.toHaveBeenCalled();
+  });
+  it("expires a genuinely rejected token", async () => {
+    await organizerLogin();
+    vi.mocked(fetch).mockImplementation(
+      async () => new Response("{}", { status: 401 }),
+    );
+    await expect(
+      request("/v1/event/1/count_unregistered_hackers/"),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(hasSession()).toBe(false);
+    expect(window.dispatchEvent).toHaveBeenCalledOnce();
+  });
+  it("does not log out on a failed identity check", async () => {
+    await organizerLogin();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response("{}", { status: 401 }))
+      .mockRejectedValueOnce(new TypeError("Network error"));
+    await expect(
+      request("/v1/event/1/count_unregistered_hackers/"),
+    ).rejects.toBeInstanceOf(Error);
+    expect(hasSession()).toBe(true);
+    expect(window.dispatchEvent).not.toHaveBeenCalled();
+  });
+});

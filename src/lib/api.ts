@@ -84,11 +84,20 @@ export type Voucher = {
   event_id: number;
   code: string;
   hacker_id: number | null;
-  hacker: { id: number; name: string; nickname?: string | null; email?: string | null } | null;
+  hacker: {
+    id: number;
+    name: string;
+    nickname?: string | null;
+    email?: string | null;
+  } | null;
   created_at: string | null;
   assigned_at: string | null;
 };
-export type VoucherSummary = { total: number; assigned: number; unassigned: number };
+export type VoucherSummary = {
+  total: number;
+  assigned: number;
+  unassigned: number;
+};
 const base = process.env.NEXT_PUBLIC_API_BASE || "/api";
 const sessionKey = `lh-access:${process.env.NEXT_PUBLIC_API_ORIGIN || base}`;
 // sessionStorage is browser-only; guard so this module is safe to import on the server.
@@ -111,12 +120,47 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+// Some legacy endpoints return 401 for missing admin permissions. Only expire
+// the session if the identity endpoint also rejects the same access token.
+let sessionProbe: { token: string; result: Promise<number> } | undefined;
+async function resolveUnauthorized(
+  path: string,
+  token: string,
+): Promise<number> {
+  if (token !== accessToken) return 401;
+  let status = 401;
+  if (token && path !== "/v1/auth/me") {
+    if (!sessionProbe || sessionProbe.token !== token) {
+      const probe = {
+        token,
+        result: fetch(`${base}/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        })
+          .then((response) => response.status)
+          .catch(() => 0),
+      };
+      sessionProbe = probe;
+      void probe.result.finally(() => {
+        if (sessionProbe === probe) sessionProbe = undefined;
+      });
+    }
+    status = await sessionProbe.result;
+  }
+  if (token === accessToken && status === 401) {
+    clearSession();
+    window.dispatchEvent(new Event("session-expired"));
+  }
+  return status >= 200 && status < 300 ? 403 : 401;
+}
+
 export async function request<T>(
   path: string,
   method = "GET",
   body?: unknown,
   authorization?: string,
 ): Promise<T> {
+  const requestToken = accessToken;
   let response: Response;
   try {
     response = await fetch(`${base}${path}`, {
@@ -143,15 +187,15 @@ export async function request<T>(
     data = null;
   }
   if (!response.ok) {
-    if (response.status === 401 && !authorization) {
-      clearSession();
-      window.dispatchEvent(new Event("session-expired"));
-    }
+    const status =
+      response.status === 401 && !authorization
+        ? await resolveUnauthorized(path, requestToken)
+        : response.status;
     const detail =
       (data as { detail?: unknown; message?: unknown })?.detail ??
       (data as { message?: unknown })?.message;
-    const message = serverError(detail, response.status);
-    throw new ApiError(response.status, message);
+    const message = serverError(status === 403 ? undefined : detail, status);
+    throw new ApiError(status, message);
   }
   if (data === null && raw)
     throw new ApiError(
@@ -185,17 +229,24 @@ export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "S'ha produït un error inesperat.";
 // Fetches a binary endpoint (PDF, CSV, PNG) and returns an object URL for it.
 // Raw fetch (not request<T>) because the body is a blob, not JSON.
-export async function fetchFileUrl(path: string, notFound?: string): Promise<string> {
+export async function fetchFileUrl(
+  path: string,
+  notFound?: string,
+): Promise<string> {
+  const requestToken = accessToken;
   const response = await fetch(`${base}${path}`, {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
   if (!response.ok) {
-    if (response.status === 401) clearSession();
+    const status =
+      response.status === 401
+        ? await resolveUnauthorized(path, requestToken)
+        : response.status;
     throw new ApiError(
-      response.status,
+      status,
       response.status === 404 && notFound
         ? notFound
-        : serverError(undefined, response.status),
+        : serverError(undefined, status),
     );
   }
   const blob = await response.blob();
