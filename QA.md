@@ -83,3 +83,11 @@ second page, university enrichment, CV visibility, profile links/history and CV
 iframe, newest-first events, and sidebar cleanup. Desktop 1440px and mobile
 390px layouts checked; mobile document width stays within the viewport.
 This run did not use production accounts or validate the live backend latency.
+
+### Team member profiles
+
+Team members are comma-separated buttons that open the full user profile by ID
+or nickname, retaining the existing acceptance colors. Verified with gstack
+against local fixtures: three-member and empty teams, opening different members,
+CV/no-CV profiles, closing with Escape, and 1440px/390px layouts. All 26 tests and
+production build pass; lint has no errors and only existing warnings.

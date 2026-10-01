@@ -59,7 +59,7 @@ export type Team = {
   id: number;
   name: string;
   description: string;
-  members: { name: string; nickname: string }[];
+  members: { id?: number; name: string; nickname: string }[];
 };
 export type Meal = {
   id: number;

@@ -1,3 +1,4 @@
+import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
@@ -100,6 +101,9 @@ export function EventDetail({
     [page, setPage] = useState(0),
     [companyId, setCompanyId] = useState(""),
     [detail, setDetail] = useState<Participant | null>(null),
+    [teamMember, setTeamMember] = useState<Team["members"][number] | null>(
+      null,
+    ),
     [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -448,26 +452,36 @@ export function EventDetail({
                   <CardDescription>{g.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <p className="flex flex-wrap gap-x-2 gap-y-1">
+                  <p className="leading-relaxed">
                     {g.members.length ? (
                       g.members.map((m, i) => {
                         const norm = (s?: string) =>
                           (s || "").trim().replace(/\s+/g, " ").toLowerCase();
+                        const byIdentity = participants.find((p) =>
+                          m.id != null
+                            ? p.id === m.id
+                            : p.nickname === m.nickname,
+                        );
+                        const byName = participants.filter(
+                          (p) => norm(p.name) === norm(m.name),
+                        );
                         const accepted =
-                          participants.find(
-                            (p) => norm(p.name) === norm(m.name),
+                          (
+                            byIdentity ||
+                            (byName.length === 1 ? byName[0] : undefined)
                           )?.status === "accepted";
                         return (
-                          <span
-                            key={i}
-                            className={
-                              accepted
-                                ? "font-medium text-green-600"
-                                : "font-medium text-red-600"
-                            }
-                            title={accepted ? "Acceptat" : "No acceptat"}
-                          >
-                            {m.name}
+                          <span key={m.id ?? m.nickname}>
+                            {i > 0 && ", "}
+                            <button
+                              type="button"
+                              className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${accepted ? "text-green-600" : "text-red-600"}`}
+                              title={accepted ? "Acceptat" : "No acceptat"}
+                              aria-label={`Veure la fitxa de ${m.name}`}
+                              onClick={() => setTeamMember(m)}
+                            >
+                              {m.name}
+                            </button>
                           </span>
                         );
                       })
@@ -839,6 +853,13 @@ export function EventDetail({
           description={confirmation.description}
           onConfirm={confirmation.run}
           onClose={() => setConfirmation(null)}
+        />
+      )}
+      {teamMember && (
+        <TeamMemberDialog
+          key={teamMember.id ?? teamMember.nickname}
+          member={teamMember}
+          onClose={() => setTeamMember(null)}
         />
       )}
       {detail && (

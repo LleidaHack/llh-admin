@@ -1,3 +1,11 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { accountType } from "@/lib/locale";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -174,5 +182,73 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
         </section>
       )}
     </div>
+  );
+}
+
+export function TeamMemberDialog({
+  member,
+  onClose,
+}: {
+  member: { id?: number; name: string; nickname: string };
+  onClose: () => void;
+}) {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    const path =
+      member.id != null
+        ? `/v1/user/${member.id}`
+        : `/v1/user/nickname/${encodeURIComponent(member.nickname)}`;
+    void request<UserProfile>(path)
+      .then((profile) => {
+        if (active) setUser(profile);
+      })
+      .catch((e) => {
+        if (active) setError(errorMessage(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [member.id, member.nickname]);
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{user?.name || member.name}</DialogTitle>
+          <DialogDescription>
+            {user?.email ? `${user.email} · ` : ""}
+            {member.nickname}
+          </DialogDescription>
+        </DialogHeader>
+        <ErrorBox error={error} />
+        {user ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              {accountType(user.type)}
+              {user.is_verified != null &&
+                ` · ${user.is_verified ? "Correu verificat" : "Sense verificar"}`}
+              {user.id != null && ` · ID: ${user.id}`}
+              {user.code && ` · Codi: ${user.code}`}
+            </p>
+            {user.image && (
+              <img
+                src={user.image}
+                alt={`Foto de ${user.name}`}
+                className="h-20 w-20 rounded-full border object-cover"
+              />
+            )}
+            <UserProfileDetails user={user} />
+          </>
+        ) : (
+          !error && <Loading />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
