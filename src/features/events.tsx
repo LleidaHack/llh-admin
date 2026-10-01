@@ -13,7 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EditDialog, EmptyBox, type FormField } from "@/components/shared";
 import { request, type EventRecord } from "@/lib/api";
-import { dateLabel, emptyEvent, eventPayload } from "@/lib/events";
+import {
+  dateLabel,
+  emptyEvent,
+  eventPayload,
+  newestEvents,
+} from "@/lib/events";
 export function EventEditor({
   event,
   onClose,
@@ -126,7 +131,7 @@ export function Events({
 }) {
   const [query, setQuery] = useState(""),
     [create, setCreate] = useState(false);
-  const filtered = events.filter((e) =>
+  const filtered = newestEvents(events).filter((e) =>
     `${e.name} ${e.location}`.toLowerCase().includes(query.toLowerCase()),
   );
   return (

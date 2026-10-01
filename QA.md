@@ -58,3 +58,36 @@ and have an accessible label. User-generated text can wrap inside page content.
 Production build and all 17 tests pass. Lint has no errors and the same six
 pre-existing warnings. These checks use browser viewport emulation, not physical
 iOS/Android devices.
+
+## User directory and registrations — 2026-10-01
+
+- Search uses a memoized, accent-insensitive index and renders at most 50 rows
+  per page for users and registrations. Filtering searches the entire loaded
+  directory, resets pagination, and supports words in any order.
+- User rows open a scrollable profile dialog with contact/study information,
+  GitHub, LinkedIn, authenticated CV preview and participation history from
+  `/v1/hacker/{id}/events`. History and event cards show newest start dates first.
+- Registration rows show university and only offer CV for a nonempty CV field.
+  Legacy list responses are enriched from the event registration endpoint for
+  visible rows only, using six workers and a cache scoped to the mounted view.
+  A missing registration endpoint falls back to the hacker profile. Permission
+  errors remain visible and do not clear the registration list. This avoids the
+  admin-only `/pending` endpoint for ordinary organizer accounts.
+- Removed the sidebar footer and API documentation link.
+
+Validation: 26 unit tests pass; TypeScript and production build pass. Lint has
+no errors (existing warnings remain). gstack `/browse` checks used a local mock
+API with 125 users, mixed CV availability and shuffled event dates. Verified
+accent-insensitive search, finding a user outside the first page, moving to the
+second page, university enrichment, CV visibility, profile links/history and CV
+iframe, newest-first events, and sidebar cleanup. Desktop 1440px and mobile
+390px layouts checked; mobile document width stays within the viewport.
+This run did not use production accounts or validate the live backend latency.
+
+### Team member profiles
+
+Team members are comma-separated buttons that open the full user profile by ID
+or nickname, retaining the existing acceptance colors. Verified with gstack
+against local fixtures: three-member and empty teams, opening different members,
+CV/no-CV profiles, closing with Escape, and 1440px/390px layouts. All 26 tests and
+production build pass; lint has no errors and only existing warnings.

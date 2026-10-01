@@ -2,23 +2,12 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  CalendarDays,
-  Building2,
-  Users,
-  LogOut,
-  ExternalLink,
-} from "lucide-react";
+import { CalendarDays, Building2, Users, LogOut } from "lucide-react";
 import { catalanValidation, clearValidation } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/shared";
-import {
-  clearSession,
-  hasSession,
-  request,
-  type Profile,
-} from "@/lib/api";
+import { clearSession, hasSession, request, type Profile } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -74,8 +63,6 @@ export default function PanelLayout({
       </div>
     );
 
-  const apiOrigin =
-    process.env.NEXT_PUBLIC_API_ORIGIN || "http://127.0.0.1:8000";
   const envLabel = process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL || "Local";
 
   return (
@@ -108,18 +95,6 @@ export default function PanelLayout({
             );
           })}
         </nav>
-        <div className="sidebar-bottom">
-          <p className="text-sm font-medium">Fet per organitzar.</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Cada edició, un nou començament.
-          </p>
-          <Button variant="ghost" asChild className="mt-4 justify-start">
-            <a href={`${apiOrigin}/docs`} target="_blank" rel="noreferrer">
-              Documentació de l&apos;API
-              <ExternalLink data-icon="inline-end" />
-            </a>
-          </Button>
-        </div>
       </aside>
       <div className="workspace">
         <header className="topbar">

@@ -31,6 +31,7 @@ export type Participant = {
   email: string;
   status: string;
   nickname: string;
+  study_center?: string | null;
   // Optional application fields the backend may include in the participants list.
   description?: string | null;
   cv?: string | null;
@@ -58,7 +59,7 @@ export type Team = {
   id: number;
   name: string;
   description: string;
-  members: { name: string; nickname: string }[];
+  members: { id?: number; name: string; nickname: string }[];
 };
 export type Meal = {
   id: number;
@@ -255,3 +256,19 @@ export async function fetchFileUrl(
 // Fetches a hacker's CV as a PDF and returns an object URL to open/embed it.
 export const fetchCvUrl = (hackerId: number) =>
   fetchFileUrl(`/v1/hacker/${hackerId}/cv`, "Aquest hacker no té CV.");
+
+// Registration snapshots are available to organizers. Fall back only when an
+// older backend does not expose this endpoint; never mask permission failures.
+export async function loadParticipantProfile(
+  eventId: number,
+  participantId: number,
+): Promise<HackerProfile> {
+  try {
+    return await request<HackerProfile>(
+      `/v1/event/${eventId}/registration/${participantId}`,
+    );
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    return request<HackerProfile>(`/v1/hacker/${participantId}`);
+  }
+}

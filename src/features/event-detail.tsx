@@ -1,5 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Pencil, Plus, RefreshCw, MoreHorizontal } from "lucide-react";
+import { TeamMemberDialog } from "./user-profile";
+import { useParticipantDetails } from "./use-participant-details";
+import { searchIndex, searchItems } from "@/lib/search";
+import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  ArrowLeft,
+  Pencil,
+  Plus,
+  RefreshCw,
+  MoreHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,8 +98,12 @@ export function EventDetail({
     [editing, setEditing] = useState(false),
     [mealEditor, setMealEditor] = useState<Meal | "new" | null>(null),
     [query, setQuery] = useState(""),
+    [page, setPage] = useState(0),
     [companyId, setCompanyId] = useState(""),
     [detail, setDetail] = useState<Participant | null>(null),
+    [teamMember, setTeamMember] = useState<Team["members"][number] | null>(
+      null,
+    ),
     [code, setCode] = useState("");
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -189,6 +203,25 @@ export function EventDetail({
         await load();
       },
     });
+  const index = useMemo(
+    () =>
+      searchIndex(
+        participants,
+        (p) => `${p.name} ${p.email} ${p.nickname || ""}`,
+      ),
+    [participants],
+  );
+  const filtered = useMemo(() => searchItems(index, query), [index, query]);
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1),
+  );
+  const visible = useMemo(
+    () =>
+      filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
+    [filtered, currentPage],
+  );
+  const visibleParticipants = useParticipantDetails(id, visible);
   if (loading) return <Loading />;
   if (!event)
     return (
@@ -199,9 +232,6 @@ export function EventDetail({
         </Button>
       </>
     );
-  const filtered = participants.filter((p) =>
-    `${p.name} ${p.email}`.toLowerCase().includes(query.toLowerCase()),
-  );
   return (
     <div className="flex flex-col gap-6">
       <Button variant="ghost" className="self-start" onClick={onBack}>
@@ -273,10 +303,13 @@ export function EventDetail({
             </div>
             <Input
               aria-label="Cercar participants"
-              placeholder="Cercar per nom o correu…"
+              placeholder="Cercar per nom, correu o àlies…"
               className="sm:max-w-xs"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(0);
+              }}
             />
           </div>
           {filtered.length ? (
@@ -285,15 +318,25 @@ export function EventDetail({
                 <TableRow>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
+                  <TableHead>Universitat</TableHead>
                   <TableHead>Estat</TableHead>
                   <TableHead className="text-right">Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((p) => (
+                {visibleParticipants.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{p.name}</TableCell>
                     <TableCell>{p.email}</TableCell>
+                    <TableCell>
+                      {p.detailsLoading ? (
+                        "Carregant…"
+                      ) : p.detailsError ? (
+                        <span title={p.detailsError}>No disponible</span>
+                      ) : (
+                        p.study_center?.trim() || "—"
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -316,13 +359,15 @@ export function EventDetail({
                         >
                           Detalls
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openCv(p.id)}
-                        >
-                          CV
-                        </Button>
+                        {p.cv?.trim() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCv(p.id)}
+                          >
+                            CV
+                          </Button>
+                        )}
                         {p.status !== "accepted" && (
                           <Button
                             size="sm"
@@ -384,6 +429,14 @@ export function EventDetail({
               Les sol·licituds dels participants apareixeran aquí.
             </EmptyBox>
           )}
+          {visibleParticipants.some((p) => p.detailsError) && (
+            <ErrorBox error="No s'han pogut carregar alguns CV o universitats. Torna a carregar l'esdeveniment per reintentar-ho." />
+          )}
+          <SearchPagination
+            page={currentPage}
+            total={filtered.length}
+            onChange={setPage}
+          />
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
           <h2>Equips inscrits</h2>
@@ -399,26 +452,36 @@ export function EventDetail({
                   <CardDescription>{g.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <p className="flex flex-wrap gap-x-2 gap-y-1">
+                  <p className="leading-relaxed">
                     {g.members.length ? (
                       g.members.map((m, i) => {
                         const norm = (s?: string) =>
                           (s || "").trim().replace(/\s+/g, " ").toLowerCase();
+                        const byIdentity = participants.find((p) =>
+                          m.id != null
+                            ? p.id === m.id
+                            : p.nickname === m.nickname,
+                        );
+                        const byName = participants.filter(
+                          (p) => norm(p.name) === norm(m.name),
+                        );
                         const accepted =
-                          participants.find(
-                            (p) => norm(p.name) === norm(m.name),
+                          (
+                            byIdentity ||
+                            (byName.length === 1 ? byName[0] : undefined)
                           )?.status === "accepted";
                         return (
-                          <span
-                            key={i}
-                            className={
-                              accepted
-                                ? "font-medium text-green-600"
-                                : "font-medium text-red-600"
-                            }
-                            title={accepted ? "Acceptat" : "No acceptat"}
-                          >
-                            {m.name}
+                          <span key={m.id ?? m.nickname}>
+                            {i > 0 && ", "}
+                            <button
+                              type="button"
+                              className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${accepted ? "text-green-600" : "text-red-600"}`}
+                              title={accepted ? "Acceptat" : "No acceptat"}
+                              aria-label={`Veure la fitxa de ${m.name}`}
+                              onClick={() => setTeamMember(m)}
+                            >
+                              {m.name}
+                            </button>
                           </span>
                         );
                       })
@@ -790,6 +853,13 @@ export function EventDetail({
           description={confirmation.description}
           onConfirm={confirmation.run}
           onClose={() => setConfirmation(null)}
+        />
+      )}
+      {teamMember && (
+        <TeamMemberDialog
+          key={teamMember.id ?? teamMember.nickname}
+          member={teamMember}
+          onClose={() => setTeamMember(null)}
         />
       )}
       {detail && (
