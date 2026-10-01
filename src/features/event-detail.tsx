@@ -1,5 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Pencil, Plus, RefreshCw, MoreHorizontal } from "lucide-react";
+import { useParticipantDetails } from "./use-participant-details";
+import { searchIndex, searchItems } from "@/lib/search";
+import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  ArrowLeft,
+  Pencil,
+  Plus,
+  RefreshCw,
+  MoreHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +97,7 @@ export function EventDetail({
     [editing, setEditing] = useState(false),
     [mealEditor, setMealEditor] = useState<Meal | "new" | null>(null),
     [query, setQuery] = useState(""),
+    [page, setPage] = useState(0),
     [companyId, setCompanyId] = useState(""),
     [detail, setDetail] = useState<Participant | null>(null),
     [code, setCode] = useState("");
@@ -189,6 +199,25 @@ export function EventDetail({
         await load();
       },
     });
+  const index = useMemo(
+    () =>
+      searchIndex(
+        participants,
+        (p) => `${p.name} ${p.email} ${p.nickname || ""}`,
+      ),
+    [participants],
+  );
+  const filtered = useMemo(() => searchItems(index, query), [index, query]);
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1),
+  );
+  const visible = useMemo(
+    () =>
+      filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
+    [filtered, currentPage],
+  );
+  const visibleParticipants = useParticipantDetails(id, visible);
   if (loading) return <Loading />;
   if (!event)
     return (
@@ -199,9 +228,6 @@ export function EventDetail({
         </Button>
       </>
     );
-  const filtered = participants.filter((p) =>
-    `${p.name} ${p.email}`.toLowerCase().includes(query.toLowerCase()),
-  );
   return (
     <div className="flex flex-col gap-6">
       <Button variant="ghost" className="self-start" onClick={onBack}>
@@ -273,10 +299,13 @@ export function EventDetail({
             </div>
             <Input
               aria-label="Cercar participants"
-              placeholder="Cercar per nom o correu…"
+              placeholder="Cercar per nom, correu o àlies…"
               className="sm:max-w-xs"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(0);
+              }}
             />
           </div>
           {filtered.length ? (
@@ -285,15 +314,25 @@ export function EventDetail({
                 <TableRow>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
+                  <TableHead>Universitat</TableHead>
                   <TableHead>Estat</TableHead>
                   <TableHead className="text-right">Accions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((p) => (
+                {visibleParticipants.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>{p.name}</TableCell>
                     <TableCell>{p.email}</TableCell>
+                    <TableCell>
+                      {p.detailsLoading ? (
+                        "Carregant…"
+                      ) : p.detailsError ? (
+                        <span title={p.detailsError}>No disponible</span>
+                      ) : (
+                        p.study_center?.trim() || "—"
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -316,13 +355,15 @@ export function EventDetail({
                         >
                           Detalls
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openCv(p.id)}
-                        >
-                          CV
-                        </Button>
+                        {p.cv?.trim() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCv(p.id)}
+                          >
+                            CV
+                          </Button>
+                        )}
                         {p.status !== "accepted" && (
                           <Button
                             size="sm"
@@ -384,6 +425,14 @@ export function EventDetail({
               Les sol·licituds dels participants apareixeran aquí.
             </EmptyBox>
           )}
+          {visibleParticipants.some((p) => p.detailsError) && (
+            <ErrorBox error="No s'han pogut carregar alguns CV o universitats. Torna a carregar l'esdeveniment per reintentar-ho." />
+          )}
+          <SearchPagination
+            page={currentPage}
+            total={filtered.length}
+            onChange={setPage}
+          />
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
           <h2>Equips inscrits</h2>

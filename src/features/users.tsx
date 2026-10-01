@@ -1,5 +1,15 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { UserProfileDetails, type UserProfile as User } from "./user-profile";
+import { searchIndex, searchItems } from "@/lib/search";
+import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { accountType } from "@/lib/locale";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { request, errorMessage } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,28 +36,19 @@ import {
   Loading,
   ConfirmDialog,
 } from "@/components/shared";
-type User = {
-  id?: number;
-  name: string;
-  nickname: string;
-  type: string;
-  email?: string;
-  is_verified?: boolean;
-  code?: string;
-  telephone?: string;
-  image?: string | null;
-};
 export function Users() {
   const [items, setItems] = useState<User[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [query, setQuery] = useState(""),
+    [page, setPage] = useState(0),
     [email, setEmail] = useState(""),
     [selected, setSelected] = useState<User | null>(null),
     [busy, setBusy] = useState(false),
     [operation, setOperation] = useState<"ban" | "unban" | "verify" | null>(
       null,
     );
+  const lookupId = useRef(0);
   useEffect(() => {
     request<User[]>("/v1/user/all")
       .then(setItems)
@@ -55,19 +56,30 @@ export function Users() {
       .finally(() => setLoading(false));
   }, []);
   async function lookup(value: string, kind = "email") {
+    const id = ++lookupId.current;
     setBusy(true);
     setError("");
     setSelected(null);
     try {
-      setSelected(
-        await request(`/v1/user/${kind}/${encodeURIComponent(value)}`),
+      const user = await request<User>(
+        `/v1/user/${kind}/${encodeURIComponent(value.trim())}`,
       );
+      if (id === lookupId.current) setSelected(user);
     } catch (e) {
-      setError(errorMessage(e));
+      if (id === lookupId.current) setError(errorMessage(e));
     } finally {
-      setBusy(false);
+      if (id === lookupId.current) setBusy(false);
     }
   }
+  const index = useMemo(
+    () => searchIndex(items, (u) => `${u.name} ${u.nickname} ${u.email || ""}`),
+    [items],
+  );
+  const filtered = useMemo(() => searchItems(index, query), [index, query]);
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1),
+  );
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -105,60 +117,93 @@ export function Users() {
         </Button>
       </form>
       {selected && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{selected.name}</CardTitle>
-            <CardDescription>
-              {selected.email} · {selected.nickname}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-3">
-            {selected.image && (
-              <img
-                src={selected.image}
-                alt={`Foto de ${selected.name}`}
-                className="h-20 w-20 rounded-full border object-cover"
-              />
-            )}
-            <Badge variant="secondary">{accountType(selected.type)}</Badge>
-            <Badge variant="outline">
-              {selected.is_verified ? "Correu verificat" : "Sense verificar"}
-            </Badge>
-            <span className="text-sm">
-              ID: {selected.id} · Codi: {selected.code}
-            </span>
-            {selected.is_verified === false && selected.id != null && (
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={() => setOperation("verify")}
-              >
-                Verificar compte
-              </Button>
-            )}
-            {selected.type === "hacker" && (
-              <>
-                <Button variant="outline" onClick={() => setOperation("ban")}>
-                  Bloquejar l'accés
-                </Button>
-                <Button variant="outline" onClick={() => setOperation("unban")}>
-                  Desbloquejar l'accés
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelected(null);
+              setOperation(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Fitxa de l'usuari</DialogTitle>
+              <DialogDescription>
+                Dades del compte, perfil i participacions.
+              </DialogDescription>
+            </DialogHeader>
+            <Card>
+              <CardHeader>
+                <CardTitle>{selected.name}</CardTitle>
+                <CardDescription>
+                  {selected.email} · {selected.nickname}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-center gap-3">
+                {selected.image && (
+                  <img
+                    src={selected.image}
+                    alt={`Foto de ${selected.name}`}
+                    className="h-20 w-20 rounded-full border object-cover"
+                  />
+                )}
+                <Badge variant="secondary">{accountType(selected.type)}</Badge>
+                <Badge variant="outline">
+                  {selected.is_verified
+                    ? "Correu verificat"
+                    : "Sense verificar"}
+                </Badge>
+                <span className="text-sm">
+                  ID: {selected.id} · Codi: {selected.code}
+                </span>
+                {selected.is_verified === false && selected.id != null && (
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => setOperation("verify")}
+                  >
+                    Verificar compte
+                  </Button>
+                )}
+                {selected.type === "hacker" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setOperation("ban")}
+                    >
+                      Bloquejar l'accés
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setOperation("unban")}
+                    >
+                      Desbloquejar l'accés
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            <UserProfileDetails
+              key={selected.id ?? selected.nickname}
+              user={selected}
+            />
+          </DialogContent>
+        </Dialog>
       )}
       <Input
         aria-label="Filtrar usuaris"
         placeholder="Filtrar per nom o àlies…"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setPage(0);
+        }}
         className="sm:max-w-xs"
       />
       {loading ? (
         <Loading />
-      ) : items.length ? (
+      ) : filtered.length ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -169,14 +214,16 @@ export function Users() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items
-              .filter((u) =>
-                `${u.name} ${u.nickname}`
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-              )
+            {filtered
+              .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
               .map((u) => (
-                <TableRow key={u.nickname}>
+                <TableRow
+                  key={u.nickname}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    if (!busy) void lookup(u.nickname, "nickname");
+                  }}
+                >
                   <TableCell>
                     <span className="flex items-center gap-2">
                       {u.image && (
@@ -198,7 +245,10 @@ export function Users() {
                       size="sm"
                       variant="outline"
                       disabled={busy}
-                      onClick={() => void lookup(u.nickname, "nickname")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void lookup(u.nickname, "nickname");
+                      }}
                     >
                       Veure el compte
                     </Button>
@@ -208,7 +258,16 @@ export function Users() {
           </TableBody>
         </Table>
       ) : (
-        <EmptyBox />
+        <EmptyBox
+          title={query ? "Cap usuari coincideix" : "No hi ha usuaris"}
+        />
+      )}
+      {!loading && (
+        <SearchPagination
+          page={currentPage}
+          total={filtered.length}
+          onChange={setPage}
+        />
       )}
       {operation && selected && (
         <ConfirmDialog
@@ -225,6 +284,7 @@ export function Users() {
               setSelected({ ...selected, is_verified: true });
             } else {
               await request(`/v1/hacker/${selected.id}/${operation}`, "POST");
+              setSelected({ ...selected, banned: operation === "ban" });
             }
           }}
         />

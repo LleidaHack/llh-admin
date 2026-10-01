@@ -54,3 +54,12 @@ export function dateLabel(value: string) {
     year: "numeric",
   });
 }
+
+export function newestEvents<T extends { id: number; start_date: string }>(
+  events: T[],
+): T[] {
+  const timestamp = (value: string) => Date.parse(value) || 0;
+  return [...events].sort(
+    (a, b) => timestamp(b.start_date) - timestamp(a.start_date) || b.id - a.id,
+  );
+}

@@ -117,3 +117,42 @@ describe("legacy permission errors", () => {
     expect(window.dispatchEvent).not.toHaveBeenCalled();
   });
 });
+
+describe("organizer participant profiles", () => {
+  it("uses event registration fields, including explicit absence of a CV", async () => {
+    const { loadParticipantProfile } = await import("./api");
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ cv: null, study_center: "UdL" })),
+    );
+    expect(await loadParticipantProfile(10, 2)).toEqual({
+      cv: null,
+      study_center: "UdL",
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/v1/event/10/registration/2"),
+      expect.anything(),
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("supports backends without the registration endpoint", async () => {
+    const { loadParticipantProfile } = await import("./api");
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response("{}", { status: 404 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ cv: "cv.pdf", study_center: "UPC" })),
+      );
+    expect(await loadParticipantProfile(10, 2)).toEqual({
+      cv: "cv.pdf",
+      study_center: "UPC",
+    });
+    expect(vi.mocked(fetch).mock.calls[1][0]).toContain("/v1/hacker/2");
+  });
+  it("does not mask permission failures or contact admin-only endpoints", async () => {
+    const { loadParticipantProfile } = await import("./api");
+    vi.mocked(fetch).mockResolvedValueOnce(new Response("{}", { status: 403 }));
+    await expect(loadParticipantProfile(10, 2)).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
