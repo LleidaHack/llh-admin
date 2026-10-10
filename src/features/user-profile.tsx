@@ -185,6 +185,29 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
   );
 }
 
+// Account summary, photo and full hacker profile, shared by every profile dialog.
+export function UserAccountProfile({ user }: { user: UserProfile }) {
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">
+        {accountType(user.type)}
+        {user.is_verified != null &&
+          ` · ${user.is_verified ? "Correu verificat" : "Sense verificar"}`}
+        {user.id != null && ` · ID: ${user.id}`}
+        {user.code && ` · Codi: ${user.code}`}
+      </p>
+      {user.image && (
+        <img
+          src={user.image}
+          alt={`Foto de ${user.name}`}
+          className="h-20 w-20 rounded-full border object-cover"
+        />
+      )}
+      <UserProfileDetails user={user} />
+    </>
+  );
+}
+
 export function TeamMemberDialog({
   member,
   onClose,
@@ -228,23 +251,7 @@ export function TeamMemberDialog({
         </DialogHeader>
         <ErrorBox error={error} />
         {user ? (
-          <>
-            <p className="text-sm text-muted-foreground">
-              {accountType(user.type)}
-              {user.is_verified != null &&
-                ` · ${user.is_verified ? "Correu verificat" : "Sense verificar"}`}
-              {user.id != null && ` · ID: ${user.id}`}
-              {user.code && ` · Codi: ${user.code}`}
-            </p>
-            {user.image && (
-              <img
-                src={user.image}
-                alt={`Foto de ${user.name}`}
-                className="h-20 w-20 rounded-full border object-cover"
-              />
-            )}
-            <UserProfileDetails user={user} />
-          </>
+          <UserAccountProfile user={user} />
         ) : (
           !error && <Loading />
         )}

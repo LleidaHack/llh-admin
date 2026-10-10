@@ -32,6 +32,7 @@ import {
   type Participant,
   type HackerProfile,
 } from "@/lib/api";
+import { UserAccountProfile, type UserProfile } from "./user-profile";
 
 // The backend returns these endpoints as untyped dicts/lists, so render whatever
 // shape comes back generically instead of hard-coding fields that may drift.
@@ -426,6 +427,21 @@ export function ParticipantDetailDialog({
   const [data, setData] = useState<HackerProfile>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [userError, setUserError] = useState("");
+  useEffect(() => {
+    let active = true;
+    void request<UserProfile>(`/v1/user/${participant.id}`)
+      .then((profile) => {
+        if (active) setUser(profile);
+      })
+      .catch((e) => {
+        if (active) setUserError(errorMessage(e));
+      });
+    return () => {
+      active = false;
+    };
+  }, [participant.id]);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -463,7 +479,7 @@ export function ParticipantDetailDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{participant.name}</DialogTitle>
           <DialogDescription>
@@ -505,6 +521,7 @@ export function ParticipantDetailDialog({
               </p>
             )}
           </div>
+          <h2>Dades de la inscripció</h2>
           {loading ? (
             <Loading />
           ) : present.length ? (
@@ -529,6 +546,15 @@ export function ParticipantDetailDialog({
               </p>
             )
           )}
+          <section className="flex flex-col gap-3 border-t pt-5">
+            <h2>Perfil de l&apos;usuari</h2>
+            <ErrorBox error={userError} />
+            {user ? (
+              <UserAccountProfile user={user} />
+            ) : (
+              !userError && <Loading />
+            )}
+          </section>
         </div>
       </DialogContent>
     </Dialog>

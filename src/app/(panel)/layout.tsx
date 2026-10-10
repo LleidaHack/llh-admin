@@ -2,7 +2,14 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Building2, Users, LogOut } from "lucide-react";
+import {
+  CalendarDays,
+  Building2,
+  Users,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { catalanValidation, clearValidation } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +32,20 @@ export default function PanelLayout({
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [checking, setChecking] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
+    } catch {}
+  }, []);
+  const toggleSidebar = () =>
+    setCollapsed((current) => {
+      try {
+        localStorage.setItem("sidebar-collapsed", current ? "0" : "1");
+      } catch {}
+      return !current;
+    });
 
   useEffect(() => {
     let active = true;
@@ -68,10 +89,11 @@ export default function PanelLayout({
   return (
     <div
       className="app-shell"
+      data-sidebar={collapsed ? "collapsed" : "open"}
       onInvalidCapture={catalanValidation}
       onInputCapture={clearValidation}
     >
-      <aside className="sidebar">
+      <aside className="sidebar" id="panel-sidebar">
         <div className="brand">
           <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
         </div>
@@ -99,6 +121,17 @@ export default function PanelLayout({
       <div className="workspace">
         <header className="topbar">
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sidebar-toggle"
+              aria-label={collapsed ? "Mostrar el menú" : "Amagar el menú"}
+              aria-controls="panel-sidebar"
+              aria-expanded={!collapsed}
+              onClick={toggleSidebar}
+            >
+              {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
             <span className="text-sm text-muted-foreground">
               Panell de gestió
             </span>

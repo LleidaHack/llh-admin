@@ -32,6 +32,8 @@ export type Participant = {
   status: string;
   nickname: string;
   study_center?: string | null;
+  // ISO timestamp; null for registrations older than the backend column.
+  registered_at?: string | null;
   // Optional application fields the backend may include in the participants list.
   description?: string | null;
   cv?: string | null;
