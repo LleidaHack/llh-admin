@@ -34,9 +34,24 @@ export type Participant = {
   study_center?: string | null;
   // ISO timestamp; null for registrations older than the backend column.
   registered_at?: string | null;
+  notes_count?: number;
   // Optional application fields the backend may include in the participants list.
   description?: string | null;
   cv?: string | null;
+};
+export type ParticipantNote = {
+  id: number;
+  hacker_id: number;
+  author_id: number | null;
+  body: string;
+  created_at: string;
+};
+export type AuditEntry = {
+  id: number;
+  actor_id: number | null;
+  action: string;
+  target_id: number | null;
+  created_at: string;
 };
 // Full hacker profile from GET /v1/hacker/{hackerId} (HackerGetAll). All optional
 // because visibility depends on the caller's permissions and the account's data.

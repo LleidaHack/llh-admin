@@ -63,3 +63,11 @@ export function newestEvents<T extends { id: number; start_date: string }>(
     (a, b) => timestamp(b.start_date) - timestamp(a.start_date) || b.id - a.id,
   );
 }
+
+// Backend timestamps from now() are UTC but serialized without an offset.
+export function serverDate(value: string) {
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`);
+}
+export function dateTimeLabel(value: string) {
+  return serverDate(value).toLocaleString("ca-ES");
+}

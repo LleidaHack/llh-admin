@@ -114,7 +114,10 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
         {fields.map(({ key, label, link }) => {
           const value = profile[key];
           if (value == null || String(value).trim() === "") return null;
-          const text = String(value);
+          const text =
+            key === "created_at" || key === "birthdate"
+              ? dateLabel(String(value))
+              : String(value);
           return (
             <div key={key}>
               <dt className="text-sm text-muted-foreground">{label}</dt>
@@ -250,11 +253,7 @@ export function TeamMemberDialog({
           </DialogDescription>
         </DialogHeader>
         <ErrorBox error={error} />
-        {user ? (
-          <UserAccountProfile user={user} />
-        ) : (
-          !error && <Loading />
-        )}
+        {user ? <UserAccountProfile user={user} /> : !error && <Loading />}
       </DialogContent>
     </Dialog>
   );
