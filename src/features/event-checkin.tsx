@@ -70,7 +70,10 @@ export function TicketsCard({ id }: { id: number }) {
         ? `Es tornarà a enviar el correu amb el QR de check-in als ${status?.eligible ?? 0} participants acceptats i confirmats, encara que ja l'hagin rebut. Aquesta acció envia correus reals.`
         : `S'enviarà el correu amb el QR de check-in als ${status?.pending ?? 0} participants acceptats i confirmats que encara no l'han rebut. Aquesta acció envia correus reals.`,
       run: async () => {
-        await request(`/v1/event/${id}/tickets/send${force ? "?force=true" : ""}`, "POST");
+        await request(
+          `/v1/event/${id}/tickets/send${force ? "?force=true" : ""}`,
+          "POST",
+        );
         await load();
       },
     });
@@ -89,7 +92,9 @@ export function TicketsCard({ id }: { id: number }) {
         <ErrorBox error={error} />
         {status && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">Amb dret a tiquet: {status.eligible}</Badge>
+            <Badge variant="secondary">
+              Amb dret a tiquet: {status.eligible}
+            </Badge>
             <Badge variant="secondary">Enviats: {status.sent}</Badge>
             <Badge variant={status.pending ? "default" : "secondary"}>
               Pendents: {status.pending}
@@ -97,7 +102,8 @@ export function TicketsCard({ id }: { id: number }) {
             {status.running && (
               <Badge>
                 <RefreshCw data-icon="inline-start" className="animate-spin" />
-                Enviant… {status.progress.sent ?? 0}/{status.progress.total ?? 0}
+                Enviant… {status.progress.sent ?? 0}/
+                {status.progress.total ?? 0}
               </Badge>
             )}
             {(status.progress.failed ?? 0) > 0 && (
@@ -122,7 +128,11 @@ export function TicketsCard({ id }: { id: number }) {
           >
             Reenviar a tothom
           </Button>
-          <Button variant="ghost" onClick={() => void load()} disabled={!status}>
+          <Button
+            variant="ghost"
+            onClick={() => void load()}
+            disabled={!status}
+          >
             <RefreshCw data-icon="inline-start" />
             Actualitzar
           </Button>
@@ -196,7 +206,9 @@ export function VouchersCard({ id }: { id: number }) {
       title: `Generar ${n} vouchers`,
       description: `Es crearan ${n} codis nous per imprimir a les acreditacions físiques d'aquest esdeveniment.`,
       run: async () => {
-        await request(`/v1/event/${id}/vouchers/generate`, "POST", { count: n });
+        await request(`/v1/event/${id}/vouchers/generate`, "POST", {
+          count: n,
+        });
         await load();
       },
     });
@@ -219,7 +231,10 @@ export function VouchersCard({ id }: { id: number }) {
       title: `Alliberar ${v.code}`,
       description: `El voucher deixarà d'estar assignat a ${v.hacker?.name ?? "aquest participant"}. La seva assistència es manté i se li podrà assignar un altre voucher al check-in.`,
       run: async () => {
-        await request(`/v1/event/${id}/vouchers/${encodeURIComponent(v.code)}/assign`, "DELETE");
+        await request(
+          `/v1/event/${id}/vouchers/${encodeURIComponent(v.code)}/assign`,
+          "DELETE",
+        );
         await load();
       },
     });
@@ -323,11 +338,17 @@ export function VouchersCard({ id }: { id: number }) {
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {v.assigned_at ? new Date(v.assigned_at).toLocaleString("ca") : "—"}
+                      {v.assigned_at
+                        ? new Date(v.assigned_at).toLocaleString("ca")
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       {v.hacker && (
-                        <Button variant="outline" size="sm" onClick={() => release(v)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => release(v)}
+                        >
                           Alliberar
                         </Button>
                       )}
@@ -338,7 +359,8 @@ export function VouchersCard({ id }: { id: number }) {
             </Table>
             {visible.length > 200 && (
               <p className="text-sm text-muted-foreground">
-                Es mostren 200 de {visible.length}. Afina la cerca o exporta el CSV.
+                Es mostren 200 de {visible.length}. Afina la cerca o exporta el
+                CSV.
               </p>
             )}
           </>

@@ -24,7 +24,12 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { ConfirmDialog, EmptyBox, ErrorBox, Loading } from "@/components/shared";
+import {
+  ConfirmDialog,
+  EmptyBox,
+  ErrorBox,
+  Loading,
+} from "@/components/shared";
 import {
   request,
   errorMessage,
@@ -33,6 +38,7 @@ import {
   type HackerProfile,
 } from "@/lib/api";
 import { UserAccountProfile, type UserProfile } from "./user-profile";
+import { ParticipantNotes } from "./participant-notes";
 
 // The backend returns these endpoints as untyped dicts/lists, so render whatever
 // shape comes back generically instead of hard-coding fields that may drift.
@@ -280,18 +286,27 @@ export function AcceptedMailsCard({ id }: { id: number }) {
       <CardHeader>
         <CardTitle>Correus dels participants acceptats</CardTitle>
         <CardDescription>
-          Exporta les adreces per enviar comunicacions des d&apos;una altra eina.
+          Exporta les adreces per enviar comunicacions des d&apos;una altra
+          eina.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <ErrorBox error={error} />
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void load()} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => void load()}
+            disabled={loading}
+          >
             {loading ? "Carregant…" : "Carregar correus"}
           </Button>
           {mails && mails.length > 0 && (
             <Button variant="outline" onClick={() => void copy()}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+              {copied ? (
+                <Check data-icon="inline-start" />
+              ) : (
+                <Copy data-icon="inline-start" />
+              )}
               Copiar {mails.length}
             </Button>
           )}
@@ -398,18 +413,21 @@ function LinkOrText({ value }: { value: string }) {
   );
 }
 
-const detailFields: { key: keyof HackerProfile; label: string; link?: boolean }[] =
-  [
-    { key: "studies", label: "Estudis" },
-    { key: "study_center", label: "Centre d'estudis" },
-    { key: "location", label: "Ubicació" },
-    { key: "food_restrictions", label: "Restriccions alimentàries" },
-    { key: "shirt_size", label: "Talla de samarreta" },
-    { key: "how_did_you_meet_us", label: "Com ens va conèixer" },
-    { key: "telephone", label: "Telèfon" },
-    { key: "github", label: "GitHub", link: true },
-    { key: "linkedin", label: "LinkedIn", link: true },
-  ];
+const detailFields: {
+  key: keyof HackerProfile;
+  label: string;
+  link?: boolean;
+}[] = [
+  { key: "studies", label: "Estudis" },
+  { key: "study_center", label: "Centre d'estudis" },
+  { key: "location", label: "Ubicació" },
+  { key: "food_restrictions", label: "Restriccions alimentàries" },
+  { key: "shirt_size", label: "Talla de samarreta" },
+  { key: "how_did_you_meet_us", label: "Com ens va conèixer" },
+  { key: "telephone", label: "Telèfon" },
+  { key: "github", label: "GitHub", link: true },
+  { key: "linkedin", label: "LinkedIn", link: true },
+];
 
 // Shows the CV, the experience text and the full profile for a participant, so
 // acceptances can be decided without leaving the panel. Profile is fetched from
@@ -419,10 +437,12 @@ export function ParticipantDetailDialog({
   eventId,
   participant,
   onClose,
+  onNotesChange,
 }: {
   eventId: number;
   participant: Participant;
   onClose: () => void;
+  onNotesChange?: () => void;
 }) {
   const [data, setData] = useState<HackerProfile>();
   const [loading, setLoading] = useState(true);
@@ -546,6 +566,11 @@ export function ParticipantDetailDialog({
               </p>
             )
           )}
+          <ParticipantNotes
+            eventId={eventId}
+            hackerId={participant.id}
+            onChange={onNotesChange}
+          />
           <section className="flex flex-col gap-3 border-t pt-5">
             <h2>Perfil de l&apos;usuari</h2>
             <ErrorBox error={userError} />
@@ -605,7 +630,9 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
               onChange={(e) => setMealId(e.target.value)}
               required
             >
-              <NativeSelectOption value="">Selecciona un àpat</NativeSelectOption>
+              <NativeSelectOption value="">
+                Selecciona un àpat
+              </NativeSelectOption>
               {meals.map((m) => (
                 <NativeSelectOption key={m.id} value={m.id}>
                   {m.name}
@@ -614,7 +641,9 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
             </NativeSelect>
           </Field>
           <Field className="w-auto">
-            <FieldLabel htmlFor="meal-eat-code">Codi del participant</FieldLabel>
+            <FieldLabel htmlFor="meal-eat-code">
+              Codi del participant
+            </FieldLabel>
             <Input
               id="meal-eat-code"
               value={code}

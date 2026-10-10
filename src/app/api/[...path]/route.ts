@@ -33,10 +33,10 @@ async function proxy(request: NextRequest) {
       redirect: "manual",
     });
   } catch {
-    return new Response(
-      JSON.stringify({ detail: "backend unreachable" }),
-      { status: 502, headers: { "content-type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ detail: "backend unreachable" }), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    });
   }
 
   const responseHeaders = new Headers();
