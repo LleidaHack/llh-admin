@@ -77,6 +77,45 @@ const TIERS = [
   { value: 3, label: "Supporter" },
   { value: 4, label: "Inferior" },
 ];
+const STATUS_ORDER: Record<string, number> = {
+  pending: 0,
+  accepted: 1,
+  rejected: 2,
+};
+const SORTS = {
+  oldest: "Ordre d'inscripció (més antics primer)",
+  newest: "Ordre d'inscripció (més recents primer)",
+  name: "Nom (A–Z)",
+  "name-desc": "Nom (Z–A)",
+  status: "Estat (pendents primer)",
+  email: "Correu electrònic",
+} as const;
+type ParticipantSort = keyof typeof SORTS;
+const byName = new Intl.Collator("ca", { sensitivity: "base" }).compare;
+// The server list follows registration order, so its index breaks ties and
+// orders registrations made before registered_at was recorded.
+function sortParticipants(list: Participant[], sort: ParticipantSort) {
+  const ranked = list.map((p, index) => ({ p, index }));
+  const time = (p: Participant) =>
+    p.registered_at ? Date.parse(p.registered_at) : -Infinity;
+  const compare = {
+    oldest: (a: Participant, b: Participant) => time(a) - time(b) || 0,
+    newest: (a: Participant, b: Participant) => time(b) - time(a) || 0,
+    name: (a: Participant, b: Participant) => byName(a.name, b.name),
+    "name-desc": (a: Participant, b: Participant) => byName(b.name, a.name),
+    status: (a: Participant, b: Participant) =>
+      (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3),
+    email: (a: Participant, b: Participant) => byName(a.email, b.email),
+  }[sort];
+  return ranked
+    .sort(
+      (a, b) =>
+        compare(a.p, b.p) ||
+        (sort === "newest" ? b.index - a.index : a.index - b.index),
+    )
+    .map(({ p }) => p);
+}
+
 export function EventDetail({
   id,
   onBack,
@@ -99,6 +138,7 @@ export function EventDetail({
     [mealEditor, setMealEditor] = useState<Meal | "new" | null>(null),
     [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
+    [sort, setSort] = useState<ParticipantSort>("oldest"),
     [companyId, setCompanyId] = useState(""),
     [detail, setDetail] = useState<Participant | null>(null),
     [teamMember, setTeamMember] = useState<Team["members"][number] | null>(
@@ -211,7 +251,10 @@ export function EventDetail({
       ),
     [participants],
   );
-  const filtered = useMemo(() => searchItems(index, query), [index, query]);
+  const filtered = useMemo(
+    () => sortParticipants(searchItems(index, query), sort),
+    [index, query, sort],
+  );
   const currentPage = Math.min(
     page,
     Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1),
@@ -301,16 +344,32 @@ export function EventDetail({
                 Revisa les sol·licituds i decideix qui participa.
               </p>
             </div>
-            <Input
-              aria-label="Cercar participants"
-              placeholder="Cercar per nom, correu o àlies…"
-              className="sm:max-w-xs"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(0);
-              }}
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <NativeSelect
+                aria-label="Ordenar les inscripcions"
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as ParticipantSort);
+                  setPage(0);
+                }}
+              >
+                {Object.entries(SORTS).map(([value, label]) => (
+                  <NativeSelectOption key={value} value={value}>
+                    {label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+              <Input
+                aria-label="Cercar participants"
+                placeholder="Cercar per nom, correu o àlies…"
+                className="sm:max-w-xs"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </div>
           </div>
           {filtered.length ? (
             <Table>
@@ -318,6 +377,7 @@ export function EventDetail({
                 <TableRow>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
+                  <TableHead>Inscripció</TableHead>
                   <TableHead>Universitat</TableHead>
                   <TableHead>Estat</TableHead>
                   <TableHead className="text-right">Accions</TableHead>
@@ -328,6 +388,9 @@ export function EventDetail({
                   <TableRow key={p.id}>
                     <TableCell>{p.name}</TableCell>
                     <TableCell>{p.email}</TableCell>
+                    <TableCell>
+                      {p.registered_at ? dateLabel(p.registered_at) : "—"}
+                    </TableCell>
                     <TableCell>
                       {p.detailsLoading ? (
                         "Carregant…"

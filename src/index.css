@@ -374,6 +374,16 @@ h2 {
   --normal-text: var(--brand-ink);
   --normal-border: var(--success);
 }
+@media (min-width: 701px) {
+  .app-shell[data-sidebar="collapsed"] .sidebar {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
 @media (max-width: 1000px) {
   .sidebar {
     width: 208px;
