@@ -9,6 +9,8 @@ import {
   Plus,
   RefreshCw,
   MoreHorizontal,
+  Download,
+  StickyNote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,8 @@ import {
   ParticipantDetailDialog,
 } from "./event-insights";
 import { TicketsCard, VouchersCard } from "./event-checkin";
+import { AuditLogTab } from "./event-audit";
+import { toCsv, downloadCsv } from "@/lib/csv";
 import {
   request,
   errorMessage,
@@ -68,7 +72,7 @@ import {
   type Meal,
   type Team,
 } from "@/lib/api";
-import { dateLabel } from "@/lib/events";
+import { dateLabel, serverDate } from "@/lib/events";
 // Sponsor tiers shared with the HackEPS frontend: 0 = highest.
 const TIERS = [
   { value: 0, label: "Supreme" },
@@ -82,6 +86,12 @@ const STATUS_ORDER: Record<string, number> = {
   accepted: 1,
   rejected: 2,
 };
+const STATUS_LABELS: Record<string, string> = {
+  accepted: "Acceptat",
+  pending: "Pendent",
+  rejected: "Rebutjat",
+};
+const NO_CENTER = "__none__";
 const SORTS = {
   oldest: "Ordre d'inscripció (més antics primer)",
   newest: "Ordre d'inscripció (més recents primer)",
@@ -97,7 +107,7 @@ const byName = new Intl.Collator("ca", { sensitivity: "base" }).compare;
 function sortParticipants(list: Participant[], sort: ParticipantSort) {
   const ranked = list.map((p, index) => ({ p, index }));
   const time = (p: Participant) =>
-    p.registered_at ? Date.parse(p.registered_at) : -Infinity;
+    p.registered_at ? serverDate(p.registered_at).getTime() : -Infinity;
   const compare = {
     oldest: (a: Participant, b: Participant) => time(a) - time(b) || 0,
     newest: (a: Participant, b: Participant) => time(b) - time(a) || 0,
@@ -139,6 +149,10 @@ export function EventDetail({
     [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
     [sort, setSort] = useState<ParticipantSort>("oldest"),
+    [statusFilter, setStatusFilter] = useState(""),
+    [centerFilter, setCenterFilter] = useState(""),
+    [selected, setSelected] = useState<Set<number>>(new Set()),
+    [auditVersion, setAuditVersion] = useState(0),
     [companyId, setCompanyId] = useState(""),
     [detail, setDetail] = useState<Participant | null>(null),
     [teamMember, setTeamMember] = useState<Team["members"][number] | null>(
@@ -168,6 +182,7 @@ export function EventDetail({
       const [e, p, g, s, m, c] = results;
       if (e.status === "fulfilled") setEvent(e.value);
       if (p.status === "fulfilled") setParticipants(p.value.participants);
+      setAuditVersion((v) => v + 1);
       if (g.status === "fulfilled") setTeams(g.value.groups);
       if (s.status === "fulfilled") setSponsors(s.value);
       if (m.status === "fulfilled") setMeals(m.value);
@@ -251,10 +266,98 @@ export function EventDetail({
       ),
     [participants],
   );
-  const filtered = useMemo(
-    () => sortParticipants(searchItems(index, query), sort),
-    [index, query, sort],
+  const centers = useMemo(
+    () =>
+      [
+        ...new Set(
+          participants
+            .map((p) => p.study_center?.trim())
+            .filter((c): c is string => !!c),
+        ),
+      ].sort(byName),
+    [participants],
   );
+  const filtered = useMemo(
+    () =>
+      sortParticipants(
+        searchItems(index, query).filter(
+          (p) =>
+            (!statusFilter || p.status === statusFilter) &&
+            (!centerFilter ||
+              (centerFilter === NO_CENTER
+                ? !p.study_center?.trim()
+                : p.study_center?.trim() === centerFilter)),
+        ),
+        sort,
+      ),
+    [index, query, sort, statusFilter, centerFilter],
+  );
+  const selectedParticipants = participants.filter((p) => selected.has(p.id));
+  function bulk(kind: "accept" | "reject") {
+    const targets = selectedParticipants.filter((p) =>
+      kind === "accept" ? p.status !== "accepted" : p.status === "pending",
+    );
+    if (!targets.length) {
+      toast.error(
+        kind === "accept"
+          ? "Tots els seleccionats ja estan acceptats."
+          : "Només es poden rebutjar inscripcions pendents.",
+      );
+      return;
+    }
+    setConfirmation({
+      title: `${kind === "accept" ? "Acceptar" : "Rebutjar"} ${targets.length} ${targets.length === 1 ? "inscripció" : "inscripcions"}`,
+      description:
+        kind === "accept"
+          ? "Cada participant rebrà el correu d'acceptació."
+          : "Les inscripcions seleccionades passaran a rebutjades.",
+      run: async () => {
+        const failed: string[] = [];
+        // One by one: each acceptance sends a mail and checks capacity.
+        for (const p of targets) {
+          try {
+            await request(`/v1/event/${id}/${kind}/${p.id}`, "PUT");
+          } catch (e) {
+            failed.push(`${p.name}: ${errorMessage(e)}`);
+          }
+        }
+        setSelected(new Set());
+        await load();
+        if (failed.length)
+          throw new Error(
+            `${targets.length - failed.length} fets, ${failed.length} amb error. ${failed.join(" · ")}`,
+          );
+      },
+    });
+  }
+  function exportCsv() {
+    const rows = filtered.map((p) => [
+      p.id,
+      p.name,
+      p.email,
+      STATUS_LABELS[p.status] || p.status,
+      p.study_center,
+      p.registered_at,
+      p.cv?.trim() ? "Sí" : "No",
+      p.notes_count ?? 0,
+    ]);
+    downloadCsv(
+      `inscripcions-${event?.name ?? id}.csv`.replace(/[^\w.-]+/g, "_"),
+      toCsv([
+        [
+          "ID",
+          "Nom",
+          "Correu",
+          "Estat",
+          "Centre d'estudis",
+          "Data d'inscripció",
+          "CV",
+          "Notes",
+        ],
+        ...rows,
+      ]),
+    );
+  }
   const currentPage = Math.min(
     page,
     Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1),
@@ -334,6 +437,7 @@ export function EventDetail({
           <TabsTrigger value="comms">Comunicacions</TabsTrigger>
           <TabsTrigger value="statistics">Estadístiques</TabsTrigger>
           <TabsTrigger value="logistics">Logística</TabsTrigger>
+          <TabsTrigger value="audit">Historial</TabsTrigger>
           <TabsTrigger value="settings">Informació</TabsTrigger>
         </TabsList>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
@@ -344,7 +448,7 @@ export function EventDetail({
                 Revisa les sol·licituds i decideix qui participa.
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-wrap gap-2">
               <NativeSelect
                 aria-label="Ordenar les inscripcions"
                 value={sort}
@@ -359,6 +463,43 @@ export function EventDetail({
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+              <NativeSelect
+                aria-label="Filtrar per estat"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(0);
+                }}
+              >
+                <NativeSelectOption value="">
+                  Tots els estats
+                </NativeSelectOption>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <NativeSelectOption key={value} value={value}>
+                    {label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+              <NativeSelect
+                aria-label="Filtrar per centre d'estudis"
+                value={centerFilter}
+                onChange={(e) => {
+                  setCenterFilter(e.target.value);
+                  setPage(0);
+                }}
+              >
+                <NativeSelectOption value="">
+                  Tots els centres
+                </NativeSelectOption>
+                <NativeSelectOption value={NO_CENTER}>
+                  Sense centre
+                </NativeSelectOption>
+                {centers.map((center) => (
+                  <NativeSelectOption key={center} value={center}>
+                    {center}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
               <Input
                 aria-label="Cercar participants"
                 placeholder="Cercar per nom, correu o àlies…"
@@ -369,12 +510,63 @@ export function EventDetail({
                   setPage(0);
                 }}
               />
+              <Button
+                variant="outline"
+                disabled={!filtered.length}
+                onClick={exportCsv}
+              >
+                <Download data-icon="inline-start" />
+                CSV
+              </Button>
             </div>
           </div>
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded border p-3">
+              <span className="text-sm">
+                {selected.size}{" "}
+                {selected.size === 1 ? "seleccionat" : "seleccionats"}
+              </span>
+              <Button size="sm" disabled={busy} onClick={() => bulk("accept")}>
+                Acceptar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => bulk("reject")}
+              >
+                Rebutjar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelected(new Set())}
+              >
+                Treure la selecció
+              </Button>
+            </div>
+          )}
           {filtered.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <input
+                      type="checkbox"
+                      aria-label="Seleccionar tots els resultats filtrats"
+                      checked={
+                        filtered.length > 0 &&
+                        filtered.every((p) => selected.has(p.id))
+                      }
+                      onChange={(e) =>
+                        setSelected(
+                          e.target.checked
+                            ? new Set(filtered.map((p) => p.id))
+                            : new Set(),
+                        )
+                      }
+                    />
+                  </TableHead>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
                   <TableHead>Inscripció</TableHead>
@@ -386,10 +578,40 @@ export function EventDetail({
               <TableBody>
                 {visibleParticipants.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell>{p.name}</TableCell>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        aria-label={`Seleccionar ${p.name}`}
+                        checked={selected.has(p.id)}
+                        onChange={(e) =>
+                          setSelected((current) => {
+                            const next = new Set(current);
+                            if (e.target.checked) next.add(p.id);
+                            else next.delete(p.id);
+                            return next;
+                          })
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1.5">
+                        {p.name}
+                        {!!p.notes_count && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
+                            title={`${p.notes_count} ${p.notes_count === 1 ? "nota interna" : "notes internes"}`}
+                          >
+                            <StickyNote className="h-3.5 w-3.5" />
+                            {p.notes_count}
+                          </span>
+                        )}
+                      </span>
+                    </TableCell>
                     <TableCell>{p.email}</TableCell>
                     <TableCell>
-                      {p.registered_at ? dateLabel(p.registered_at) : "—"}
+                      {p.registered_at
+                        ? dateLabel(serverDate(p.registered_at).toISOString())
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       {p.detailsLoading ? (
@@ -406,11 +628,7 @@ export function EventDetail({
                           p.status === "accepted" ? "default" : "secondary"
                         }
                       >
-                        {{
-                          accepted: "Acceptat",
-                          pending: "Pendent",
-                          rejected: "Rebutjat",
-                        }[p.status] || "Desconegut"}
+                        {STATUS_LABELS[p.status] || "Desconegut"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -499,6 +717,13 @@ export function EventDetail({
             page={currentPage}
             total={filtered.length}
             onChange={setPage}
+          />
+        </TabsContent>
+        <TabsContent value="audit" className="pt-4">
+          <AuditLogTab
+            eventId={id}
+            participants={participants}
+            version={auditVersion}
           />
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
@@ -930,6 +1155,7 @@ export function EventDetail({
           eventId={id}
           participant={detail}
           onClose={() => setDetail(null)}
+          onNotesChange={() => void load()}
         />
       )}
       <Dialog open={!!cvUrl} onOpenChange={(o) => !o && closeCv()}>
