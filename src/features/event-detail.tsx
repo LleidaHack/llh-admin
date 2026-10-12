@@ -74,6 +74,7 @@ import {
   type Team,
 } from "@/lib/api";
 import { dateLabel, serverDate } from "@/lib/events";
+import { cn } from "@/lib/utils";
 // Sponsor tiers shared with the HackEPS frontend: 0 = highest.
 const TIERS = [
   { value: 0, label: "Supreme" },
@@ -685,7 +686,11 @@ export function EventDetail({
                         p.confirmed_assistance !== undefined && (
                           <Badge
                             variant="outline"
-                            className="ml-1.5"
+                            className={cn(
+                              "ml-1.5",
+                              p.confirmed_assistance &&
+                                "border-transparent bg-[var(--success)] text-black",
+                            )}
                             title={
                               p.confirmed_assistance
                                 ? "Ha confirmat l'assistència des del correu"
