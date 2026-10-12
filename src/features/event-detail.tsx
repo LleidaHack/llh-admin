@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Download,
   StickyNote,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,18 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Rebutjat",
 };
 const NO_CENTER = "__none__";
+// Extra status filters for accepted participants and their mail confirmation.
+const CONFIRMATION_FILTERS: Record<string, string> = {
+  "accepted-confirmed": "Acceptats · confirmats",
+  "accepted-unconfirmed": "Acceptats · sense confirmar",
+};
+function matchesStatus(p: Participant, filter: string) {
+  if (filter === "accepted-confirmed")
+    return p.status === "accepted" && !!p.confirmed_assistance;
+  if (filter === "accepted-unconfirmed")
+    return p.status === "accepted" && !p.confirmed_assistance;
+  return !filter || p.status === filter;
+}
 const SORTS = {
   oldest: "Ordre d'inscripció (més antics primer)",
   newest: "Ordre d'inscripció (més recents primer)",
@@ -282,7 +295,7 @@ export function EventDetail({
       sortParticipants(
         searchItems(index, query).filter(
           (p) =>
-            (!statusFilter || p.status === statusFilter) &&
+            matchesStatus(p, statusFilter) &&
             (!centerFilter ||
               (centerFilter === NO_CENTER
                 ? !p.study_center?.trim()
@@ -330,12 +343,33 @@ export function EventDetail({
       },
     });
   }
+  const unconfirmed = participants.filter(
+    (p) => p.status === "accepted" && p.confirmed_assistance === false,
+  );
+  const confirmedCount = participants.filter(
+    (p) => p.status === "accepted" && p.confirmed_assistance,
+  ).length;
+  function resendUnconfirmed() {
+    setConfirmation({
+      title: `Reenviar el correu a ${unconfirmed.length} ${unconfirmed.length === 1 ? "participant" : "participants"}`,
+      description:
+        "Rebran de nou el correu d'acceptació, amb un enllaç nou per confirmar l'assistència, els acceptats que encara no han confirmat.",
+      run: async () => {
+        const result = await request<{ sent?: number }>(
+          `/v1/event/${id}/resend-accepted-mails?only_unconfirmed=true`,
+        );
+        toast.success(`Correus enviats: ${result.sent ?? unconfirmed.length}`);
+        await load();
+      },
+    });
+  }
   function exportCsv() {
     const rows = filtered.map((p) => [
       p.id,
       p.name,
       p.email,
       STATUS_LABELS[p.status] || p.status,
+      p.status === "accepted" ? (p.confirmed_assistance ? "Sí" : "No") : "",
       p.study_center,
       p.registered_at,
       p.cv?.trim() ? "Sí" : "No",
@@ -349,6 +383,7 @@ export function EventDetail({
           "Nom",
           "Correu",
           "Estat",
+          "Assistència confirmada",
           "Centre d'estudis",
           "Data d'inscripció",
           "CV",
@@ -421,6 +456,11 @@ export function EventDetail({
         </Badge>
         <Badge variant="outline">{event.max_participants} places</Badge>
         <Badge variant="outline">{participants.length} inscrits</Badge>
+        {participants.some((p) => p.confirmed_assistance !== undefined) && (
+          <Badge variant="outline">
+            {confirmedCount} confirmats · {unconfirmed.length} sense confirmar
+          </Badge>
+        )}
       </div>
       <ErrorBox error={error} />
       <Tabs defaultValue="participants">
@@ -474,7 +514,10 @@ export function EventDetail({
                 <NativeSelectOption value="">
                   Tots els estats
                 </NativeSelectOption>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                {Object.entries({
+                  ...STATUS_LABELS,
+                  ...CONFIRMATION_FILTERS,
+                }).map(([value, label]) => (
                   <NativeSelectOption key={value} value={value}>
                     {label}
                   </NativeSelectOption>
@@ -510,6 +553,14 @@ export function EventDetail({
                   setPage(0);
                 }}
               />
+              <Button
+                variant="outline"
+                disabled={!unconfirmed.length || busy}
+                onClick={resendUnconfirmed}
+              >
+                <Send data-icon="inline-start" />
+                Reenviar als no confirmats ({unconfirmed.length})
+              </Button>
               <Button
                 variant="outline"
                 disabled={!filtered.length}
@@ -630,6 +681,22 @@ export function EventDetail({
                       >
                         {STATUS_LABELS[p.status] || "Desconegut"}
                       </Badge>
+                      {p.status === "accepted" &&
+                        p.confirmed_assistance !== undefined && (
+                          <Badge
+                            variant="outline"
+                            className="ml-1.5"
+                            title={
+                              p.confirmed_assistance
+                                ? "Ha confirmat l'assistència des del correu"
+                                : "Encara no ha confirmat l'assistència"
+                            }
+                          >
+                            {p.confirmed_assistance
+                              ? "Confirmat"
+                              : "Sense confirmar"}
+                          </Badge>
+                        )}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">

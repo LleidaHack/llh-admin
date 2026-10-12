@@ -33,6 +33,7 @@ import {
 import {
   request,
   errorMessage,
+  fetchCvUrl,
   type Meal,
   type Participant,
   type HackerProfile,
@@ -184,8 +185,8 @@ export function StatisticsTab({ id }: { id: number }) {
         )}
       </Section>
       <Section
-        title="Participants sense registrar"
-        description="Acceptats que encara no han completat el registre."
+        title="Hackers sense inscripció"
+        description="Comptes de hacker que no s'han inscrit a aquest esdeveniment."
         loading={unregistered.loading}
         error={unregistered.error}
         onReload={unregistered.reload}
@@ -403,13 +404,13 @@ function LinkOrText({ value }: { value: string }) {
       href={value}
       target="_blank"
       rel="noreferrer"
-      className="text-link underline underline-offset-2"
+      className="text-link underline [overflow-wrap:anywhere] underline-offset-2"
     >
       {value}
       <ExternalLink className="ml-1 inline size-3" />
     </a>
   ) : (
-    <span className="break-words">{value}</span>
+    <span className="[overflow-wrap:anywhere]">{value}</span>
   );
 }
 
@@ -449,6 +450,22 @@ export function ParticipantDetailDialog({
   const [error, setError] = useState("");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [userError, setUserError] = useState("");
+  const [cvUrl, setCvUrl] = useState("");
+  const [cvBusy, setCvBusy] = useState(false);
+  useEffect(() => {
+    if (!cvUrl) return;
+    return () => URL.revokeObjectURL(cvUrl);
+  }, [cvUrl]);
+  async function openCv() {
+    setCvBusy(true);
+    try {
+      setCvUrl(await fetchCvUrl(participant.id));
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setCvBusy(false);
+    }
+  }
   useEffect(() => {
     let active = true;
     void request<UserProfile>(`/v1/user/${participant.id}`)
@@ -499,7 +516,7 @@ export function ParticipantDetailDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90vh] overflow-x-hidden overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{participant.name}</DialogTitle>
           <DialogDescription>
@@ -518,10 +535,14 @@ export function ParticipantDetailDialog({
                   <ExternalLink data-icon="inline-end" />
                 </a>
               ) : (
-                <span>
+                <button
+                  type="button"
+                  disabled={cvBusy}
+                  onClick={() => void openCv()}
+                >
                   <FileText data-icon="inline-start" />
-                  CV: {cv}
-                </span>
+                  {cvBusy ? "Carregant CV…" : "Veure el CV"}
+                </button>
               )}
             </Button>
           ) : (
@@ -531,10 +552,19 @@ export function ParticipantDetailDialog({
               </p>
             )
           )}
+          {cvUrl && (
+            <iframe
+              src={cvUrl}
+              title={`CV de ${participant.name}`}
+              className="h-[60vh] w-full rounded border"
+            />
+          )}
           <div>
             <p className="text-sm font-medium">Experiència</p>
             {experience.trim() ? (
-              <p className="mt-1 whitespace-pre-wrap text-sm">{experience}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+                {experience}
+              </p>
             ) : (
               <p className="mt-1 text-sm text-muted-foreground">
                 Sense text d&apos;experiència.
@@ -545,11 +575,11 @@ export function ParticipantDetailDialog({
           {loading ? (
             <Loading />
           ) : present.length ? (
-            <dl className="grid gap-4 sm:grid-cols-2">
+            <dl className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
               {present.map((f) => (
                 <div key={f.key}>
                   <dt className="text-sm text-muted-foreground">{f.label}</dt>
-                  <dd className="mt-0.5 text-sm">
+                  <dd className="mt-0.5 min-w-0 text-sm [overflow-wrap:anywhere]">
                     {f.link ? (
                       <LinkOrText value={String(f.value)} />
                     ) : (

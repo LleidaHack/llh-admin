@@ -110,7 +110,7 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
     <div className="flex flex-col gap-5">
       <ErrorBox error={error} />
       {loading && <Loading />}
-      <dl className="grid gap-4 sm:grid-cols-2">
+      <dl className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
         {fields.map(({ key, label, link }) => {
           const value = profile[key];
           if (value == null || String(value).trim() === "") return null;
@@ -121,7 +121,7 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
           return (
             <div key={key}>
               <dt className="text-sm text-muted-foreground">{label}</dt>
-              <dd className="break-words whitespace-pre-wrap text-sm">
+              <dd className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
                 {link && /^https?:\/\//i.test(text) ? (
                   <a
                     className="underline"
