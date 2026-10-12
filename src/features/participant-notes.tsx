@@ -63,7 +63,9 @@ export function ParticipantNotes({
       {notes?.map((note) => (
         <div key={note.id} className="flex gap-3 rounded border p-3">
           <div className="flex-1">
-            <p className="whitespace-pre-wrap text-sm">{note.body}</p>
+            <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+              {note.body}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {note.author_id != null
                 ? names[note.author_id] || `Usuari ${note.author_id}`
