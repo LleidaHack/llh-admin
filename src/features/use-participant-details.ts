@@ -15,7 +15,9 @@ export function useParticipantDetails(eventId: number, visible: Participant[]) {
     let active = true;
     let cursor = 0;
     const missing = visible.filter(
-      (p) => p.cv === undefined || p.study_center === undefined,
+      (p) =>
+        (p.cv === undefined && p.has_cv === undefined) ||
+        p.study_center === undefined,
     );
     async function worker() {
       while (active && cursor < missing.length) {
@@ -63,7 +65,7 @@ export function useParticipantDetails(eventId: number, visible: Participant[]) {
       detailsLoading:
         !profile &&
         !failures[key] &&
-        (participant.cv === undefined ||
+        ((participant.cv === undefined && participant.has_cv === undefined) ||
           participant.study_center === undefined),
     };
   });

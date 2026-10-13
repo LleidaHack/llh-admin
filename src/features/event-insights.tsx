@@ -40,6 +40,7 @@ import {
 } from "@/lib/api";
 import { UserAccountProfile, type UserProfile } from "./user-profile";
 import { ParticipantNotes } from "./participant-notes";
+import { studyCenter } from "@/lib/study-centers";
 
 // The backend returns these endpoints as untyped dicts/lists, so render whatever
 // shape comes back generically instead of hard-coding fields that may drift.
@@ -164,6 +165,24 @@ function Section({
   );
 }
 
+// The backend lists every study_center as typed; count them per institution.
+function groupStudyCenters(data: unknown): unknown {
+  if (!isPlainObject(data) || !Array.isArray(data.study_center)) return data;
+  const counts = new Map<string, number>();
+  for (const raw of data.study_center) {
+    const label =
+      studyCenter(typeof raw === "string" ? raw : null)?.label ??
+      "Sense especificar";
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return {
+    ...data,
+    study_center: Object.fromEntries(
+      [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    ),
+  };
+}
+
 export function StatisticsTab({ id }: { id: number }) {
   const stats = useResource<unknown>(`/v1/event/${id}/statistics`);
   const unregistered = useResource<unknown>(
@@ -181,7 +200,7 @@ export function StatisticsTab({ id }: { id: number }) {
         {stats.data === undefined || stats.data === null ? (
           <EmptyBox title="Sense estadístiques" />
         ) : (
-          <DataView data={stats.data} />
+          <DataView data={groupStudyCenters(stats.data)} />
         )}
       </Section>
       <Section
