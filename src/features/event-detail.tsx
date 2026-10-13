@@ -679,6 +679,10 @@ export function EventDetail({
                         variant={
                           p.status === "accepted" ? "default" : "secondary"
                         }
+                        className={cn(
+                          p.status === "rejected" &&
+                            "border-transparent bg-yellow-400 text-black",
+                        )}
                       >
                         {STATUS_LABELS[p.status] || "Desconegut"}
                       </Badge>
