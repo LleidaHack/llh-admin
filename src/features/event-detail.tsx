@@ -63,6 +63,7 @@ import {
 import { TicketsCard, VouchersCard } from "./event-checkin";
 import { AuditLogTab } from "./event-audit";
 import { toCsv, downloadCsv } from "@/lib/csv";
+import { studyCenter } from "@/lib/study-centers";
 import {
   request,
   errorMessage,
@@ -83,6 +84,8 @@ const TIERS = [
   { value: 3, label: "Supporter" },
   { value: 4, label: "Inferior" },
 ];
+// Newer backends send has_cv instead of the whole base64 CV.
+const hasCv = (p: Participant) => p.has_cv ?? !!p.cv?.trim();
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
   accepted: 1,
@@ -187,7 +190,9 @@ export function EventDetail({
         request<{ participants: Participant[] }>(
           `/v1/event/${id}/hackers_participants_list`,
         ),
-        request<{ groups: Team[] }>(`/v1/event/${id}/groups`),
+        request<{ groups: Team[] }>(
+          `/v1/event/${id}/groups?include_images=false`,
+        ),
         request<Company[]>(`/v1/event/${id}/sponsors`),
         request<Meal[]>(`/v1/event/${id}/meals`),
         request<Company[]>("/v1/company/all"),
@@ -212,6 +217,19 @@ export function EventDetail({
   useEffect(() => {
     void load();
   }, [load]);
+  // After accepting/rejecting only the registrations change: skip reloading
+  // sponsors, companies, meals and teams.
+  const loadParticipants = useCallback(async () => {
+    try {
+      const result = await request<{ participants: Participant[] }>(
+        `/v1/event/${id}/hackers_participants_list`,
+      );
+      setParticipants(result.participants);
+      setAuditVersion((v) => v + 1);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }, [id]);
   async function action(path: string, method = "PUT", body?: unknown) {
     setBusy(true);
     setError("");
@@ -269,7 +287,7 @@ export function EventDetail({
       description: "Aquest canvi s'aplicarà a l'esdeveniment seleccionat.",
       run: async () => {
         await request(path, method);
-        await load();
+        await loadParticipants();
       },
     });
   const index = useMemo(
@@ -280,17 +298,19 @@ export function EventDetail({
       ),
     [participants],
   );
-  const centers = useMemo(
-    () =>
-      [
-        ...new Set(
-          participants
-            .map((p) => p.study_center?.trim())
-            .filter((c): c is string => !!c),
-        ),
-      ].sort(byName),
-    [participants],
-  );
+  const centers = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    for (const p of participants) {
+      const center = studyCenter(p.study_center);
+      if (!center) continue;
+      const entry = counts.get(center.key) ?? { label: center.label, count: 0 };
+      entry.count += 1;
+      counts.set(center.key, entry);
+    }
+    return [...counts]
+      .map(([key, entry]) => ({ key, ...entry }))
+      .sort((a, b) => b.count - a.count || byName(a.label, b.label));
+  }, [participants]);
   const filtered = useMemo(
     () =>
       sortParticipants(
@@ -299,8 +319,8 @@ export function EventDetail({
             matchesStatus(p, statusFilter) &&
             (!centerFilter ||
               (centerFilter === NO_CENTER
-                ? !p.study_center?.trim()
-                : p.study_center?.trim() === centerFilter)),
+                ? !studyCenter(p.study_center)
+                : studyCenter(p.study_center)?.key === centerFilter)),
         ),
         sort,
       ),
@@ -336,7 +356,7 @@ export function EventDetail({
           }
         }
         setSelected(new Set());
-        await load();
+        await loadParticipants();
         if (failed.length)
           throw new Error(
             `${targets.length - failed.length} fets, ${failed.length} amb error. ${failed.join(" · ")}`,
@@ -360,7 +380,7 @@ export function EventDetail({
           `/v1/event/${id}/resend-accepted-mails?only_unconfirmed=true`,
         );
         toast.success(`Correus enviats: ${result.sent ?? unconfirmed.length}`);
-        await load();
+        await loadParticipants();
       },
     });
   }
@@ -371,9 +391,10 @@ export function EventDetail({
       p.email,
       STATUS_LABELS[p.status] || p.status,
       p.status === "accepted" ? (p.confirmed_assistance ? "Sí" : "No") : "",
+      studyCenter(p.study_center)?.label ?? "",
       p.study_center,
       p.registered_at,
-      p.cv?.trim() ? "Sí" : "No",
+      hasCv(p) ? "Sí" : "No",
       p.notes_count ?? 0,
     ]);
     downloadCsv(
@@ -386,6 +407,7 @@ export function EventDetail({
           "Estat",
           "Assistència confirmada",
           "Centre d'estudis",
+          "Centre d'estudis (com l'han escrit)",
           "Data d'inscripció",
           "CV",
           "Notes",
@@ -539,8 +561,8 @@ export function EventDetail({
                   Sense centre
                 </NativeSelectOption>
                 {centers.map((center) => (
-                  <NativeSelectOption key={center} value={center}>
-                    {center}
+                  <NativeSelectOption key={center.key} value={center.key}>
+                    {center.label} ({center.count})
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
@@ -671,7 +693,9 @@ export function EventDetail({
                       ) : p.detailsError ? (
                         <span title={p.detailsError}>No disponible</span>
                       ) : (
-                        p.study_center?.trim() || "—"
+                        <span title={p.study_center?.trim() || undefined}>
+                          {studyCenter(p.study_center)?.label ?? "—"}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -716,7 +740,7 @@ export function EventDetail({
                         >
                           Detalls
                         </Button>
-                        {p.cv?.trim() && (
+                        {hasCv(p) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1231,7 +1255,7 @@ export function EventDetail({
           eventId={id}
           participant={detail}
           onClose={() => setDetail(null)}
-          onNotesChange={() => void load()}
+          onNotesChange={() => void loadParticipants()}
         />
       )}
       <Dialog open={!!cvUrl} onOpenChange={(o) => !o && closeCv()}>

@@ -35,6 +35,7 @@ export type Participant = {
   // ISO timestamp; null for registrations older than the backend column.
   registered_at?: string | null;
   notes_count?: number;
+  has_cv?: boolean;
   // Only meaningful for accepted participants.
   confirmed_assistance?: boolean;
   // Optional application fields the backend may include in the participants list.
