@@ -13,3 +13,5 @@ The event's Live operations tab manages Live content, challenges/resources, meal
 The demo uses event ID 1 and disposable local data. No production deployment is included. Production needs the coordinated backend migrations before this UI. Existing organizers migrate to admin; a trusted operator must explicitly bootstrap the first superadmin.
 
 The new operations workspace and role editor use the existing Gestió brand tokens, Space Mono typography, orange accents and shared buttons/cards. Their styles are scoped to these features; the management shell remains consistent with the rest of the panel.
+
+The Live content form also manages the public stream URL, Wi-Fi network name, public connection instructions and optional guide URL. These feed the restored Live home-page information blocks. Live alerts display temporarily and can play sound after the participant enables it; background push sound remains subject to device settings.

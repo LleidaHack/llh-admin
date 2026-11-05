@@ -291,6 +291,8 @@ export function EventOperations({ id }: { id: number }) {
               ))}
               {[
                 ["slack_url", "Enllaç de Slack"],
+                ["stream_url", "Canal de retransmissió (URL)"],
+                ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
                 ["map_url", "Imatge del mapa (URL)"],
               ].map(([key, label]) => (
                 <label key={key}>
@@ -302,6 +304,22 @@ export function EventOperations({ id }: { id: number }) {
                   />
                 </label>
               ))}
+              <label>
+                Nom de la xarxa Wi-Fi
+                <Input
+                  value={draft.wifi_name || ""}
+                  onChange={(e) => update("wifi_name", e.target.value)}
+                  maxLength={200}
+                />
+              </label>
+              <label>
+                Indicacions de connexió (públiques)
+                <Textarea
+                  value={draft.wifi_instructions || ""}
+                  onChange={(e) => update("wifi_instructions", e.target.value)}
+                  maxLength={2000}
+                />
+              </label>
               <label>
                 Indicacions del mapa
                 <Textarea
