@@ -168,8 +168,14 @@ export function EventOperations({ id }: { id: number }) {
   if (!data || !draft)
     return <p role="status">{error || "Carregant operacions…"}</p>;
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap gap-2">
+    <div className="event-operations space-y-5">
+      <div className="event-operations-heading">
+        <p className="text-xs font-bold uppercase tracking-widest">
+          HackEPS · Operacions
+        </p>
+        <h2 className="text-xl font-bold">Tot a punt per a la hackató</h2>
+      </div>
+      <div className="event-operations-nav flex flex-wrap gap-2">
         {Object.entries({
           live: "Live i continguts",
           meals: "Rondes dels àpats",
@@ -186,6 +192,7 @@ export function EventOperations({ id }: { id: number }) {
             <Button
               key={key}
               variant={tab === key ? "default" : "outline"}
+              aria-pressed={tab === key}
               onClick={() => {
                 setTab(key);
                 if (key === "audit") void historyPage();

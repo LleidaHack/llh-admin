@@ -54,7 +54,7 @@ export function UserAccessRole({
   }, [userId]);
   if (viewer?.access_role !== "superadmin") return null;
   return (
-    <section className="my-4 space-y-3 rounded border p-4">
+    <section className="user-access-role my-4 space-y-3 rounded border p-4">
       <h3 className="font-semibold">Rol i permisos</h3>
       <p className="text-sm text-muted-foreground">
         Canviar el rol conserva les inscripcions, els equips i l’historial del

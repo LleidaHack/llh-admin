@@ -512,3 +512,44 @@ h2 {
     min-height: 44px;
   }
 }
+
+/* New event tools follow the existing management brand tokens. */
+.event-operations-heading {
+  padding: 1.25rem 1.5rem;
+  border-left: 5px solid var(--brand-orange);
+  background: var(--brand-ink);
+  color: white;
+}
+.event-operations-heading p {
+  color: #ffa16f;
+  margin-bottom: 0.5rem;
+}
+.event-operations-nav {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.event-operations select {
+  min-height: 2.75rem;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.875rem;
+}
+.event-operations label {
+  line-height: 1.5;
+}
+.event-operations input[type="checkbox"] {
+  accent-color: var(--brand-orange);
+}
+.event-operations select:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}
+.user-access-role {
+  border-top: 4px solid var(--brand-orange);
+  background: var(--card);
+}
