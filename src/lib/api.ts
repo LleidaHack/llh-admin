@@ -13,7 +13,13 @@ export type EventRecord = {
   max_group_size: number;
   max_sponsors: number;
 };
-export type Profile = { id: number; name: string; email: string; type: string };
+export type Profile = {
+  id: number;
+  name: string;
+  email: string;
+  type: string;
+  access_role: "superadmin" | "admin" | "lleidahacker" | "hacker";
+};
 export type Company = {
   id: number;
   name: string;
@@ -237,8 +243,10 @@ export async function login(email: string, password: string) {
   saveToken(tokens.access_token);
   try {
     const user = await request<Profile>("/v1/auth/me");
-    if (user.type !== "lleida_hacker")
-      throw new Error("Aquest panell requereix un compte d'organitzador.");
+    if (!["superadmin", "admin"].includes(user.access_role))
+      throw new Error(
+        "Aquest panell requereix un organitzador amb rol admin o superadmin. El lleidahacker utilitza l’escàner de HackEPS.",
+      );
     return user;
   } catch (error) {
     clearSession();

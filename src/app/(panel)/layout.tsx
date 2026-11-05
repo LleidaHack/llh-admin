@@ -56,7 +56,7 @@ export default function PanelLayout({
     request<Profile>("/v1/auth/me")
       .then((p) => {
         if (!active) return;
-        if (p.type !== "lleida_hacker")
+        if (!["superadmin", "admin"].includes(p.access_role))
           throw new Error("Cal un compte d'organitzador.");
         setProfile(p);
         setChecking(false);

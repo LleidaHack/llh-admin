@@ -1,3 +1,5 @@
+"use client";
+import { EventOperations } from "./event-operations";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
@@ -501,6 +503,7 @@ export function EventDetail({
           <TabsTrigger value="statistics">Estadístiques</TabsTrigger>
           <TabsTrigger value="logistics">Logística</TabsTrigger>
           <TabsTrigger value="audit">Historial</TabsTrigger>
+          <TabsTrigger value="operations">Operacions en directe</TabsTrigger>
           <TabsTrigger value="settings">Informació</TabsTrigger>
         </TabsList>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
@@ -1141,6 +1144,9 @@ export function EventDetail({
         </TabsContent>
         <TabsContent value="logistics" className="pt-4">
           <LogisticsTab id={id} />
+        </TabsContent>
+        <TabsContent value="operations" className="pt-4">
+          <EventOperations id={id} />
         </TabsContent>
         <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
           <Card>
