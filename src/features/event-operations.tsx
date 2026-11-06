@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ChallengeChoices } from "./challenge-choices";
 import { DevpostImport } from "./devpost-import";
 import { request, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -61,15 +62,48 @@ function localDate(value: string) {
     .slice(0, 16);
 }
 
-export function EventOperations({ id }: { id: number }) {
+export type OperationSection =
+  | "live"
+  | "activities"
+  | "challenges"
+  | "prizes"
+  | "rooms"
+  | "meals"
+  | "coins"
+  | "judging"
+  | "devpost"
+  | "alerts"
+  | "audit"
+  | "roles";
+const sectionTitles: Record<OperationSection, string> = {
+  live: "Pàgina Live",
+  activities: "Agenda i activitats",
+  challenges: "Reptes i recursos",
+  prizes: "Premis",
+  rooms: "Sales i horaris del jurat",
+  meals: "Rondes dels àpats",
+  coins: "LleidaCoins",
+  judging: "Torns de presentació",
+  devpost: "Projectes de Devpost",
+  alerts: "Avisos",
+  audit: "Traçabilitat",
+  roles: "Rols i permisos",
+};
+export function EventOperations({
+  id,
+  section,
+}: {
+  id: number;
+  section: OperationSection;
+}) {
   const [data, setData] = useState<Item | null>(null),
     [draft, setDraft] = useState<Item | null>(null);
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   const [staff, setStaff] = useState<Item[]>([]);
-  const [tab, setTab] = useState("live"),
-    [reason, setReason] = useState("");
+  const tab = section;
+  const [reason, setReason] = useState("");
   const [history, setHistory] = useState<Item[]>([]),
     [historyAction, setHistoryAction] = useState("");
   const [scan, setScan] = useState({
@@ -166,48 +200,29 @@ export function EventOperations({ id }: { id: number }) {
       setError(errorMessage(e));
     }
   }
+  useEffect(() => {
+    if (section === "audit") void historyPage();
+    if (section === "roles")
+      void request<Item[]>(base + "/staff")
+        .then(setStaff)
+        .catch((e) => setError(errorMessage(e)));
+    // Each event section mounts independently; history filters refresh explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, section]);
   if (!data || !draft)
     return <p role="status">{error || "Carregant operacions…"}</p>;
   return (
     <div className="event-operations space-y-5">
-      <div className="event-operations-heading">
-        <p className="text-xs font-bold uppercase tracking-widest">
-          HackEPS · Operacions
-        </p>
-        <h2 className="text-xl font-bold">Tot a punt per a la hackató</h2>
-      </div>
-      <div className="event-operations-nav flex flex-wrap gap-2">
-        {Object.entries({
-          live: "Live i continguts",
-          meals: "Rondes dels àpats",
-          coins: "Punts i bescanvis",
-          judging: "Presentacions",
-          devpost: "Devpost",
-          alerts: "Avisos",
-          audit: "Traçabilitat",
-          roles: "Rols i permisos",
-        })
-          .filter(
-            ([key]) => key !== "roles" || data.access_role === "superadmin",
-          )
-          .map(([key, label]) => (
-            <Button
-              key={key}
-              variant={tab === key ? "default" : "outline"}
-              aria-pressed={tab === key}
-              onClick={() => {
-                setTab(key);
-                if (key === "audit") void historyPage();
-                if (key === "roles")
-                  void request<Item[]>(base + "/staff")
-                    .then(setStaff)
-                    .catch((e) => setError(errorMessage(e)));
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-      </div>
+      <h2 className="text-xl font-bold">{sectionTitles[section]}</h2>
+      {section === "challenges" && (
+        <ChallengeChoices
+          id={id}
+          version={data.version}
+          published={data.challenges_released ?? true}
+          open={data.challenge_votes_open ?? false}
+          onChange={load}
+        />
+      )}
       {error && (
         <p role="alert" className="rounded border border-red-500 p-3">
           {error}
@@ -218,7 +233,9 @@ export function EventOperations({ id }: { id: number }) {
           {notice}
         </p>
       )}
-      {tab === "live" && (
+      {["live", "activities", "challenges", "prizes", "rooms"].includes(
+        tab,
+      ) && (
         <form
           className="space-y-5"
           onSubmit={(e) => {
@@ -232,307 +249,346 @@ export function EventOperations({ id }: { id: number }) {
             );
           }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuració del Live</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <label>
-                Títol
-                <Input
-                  value={draft.title}
-                  onChange={(e) => update("title", e.target.value)}
-                />
-              </label>
-              <label>
-                Fase
-                <select
-                  className="block w-full rounded border p-2"
-                  value={draft.phase}
-                  onChange={(e) => update("phase", e.target.value)}
-                >
-                  {["preparation", "hacking", "judging", "finished"].map(
-                    (v, i) => (
-                      <option value={v} key={v}>
-                        {
-                          [
-                            "Preparació",
-                            "Hacking",
-                            "Presentacions",
-                            "Finalitzat",
-                          ][i]
-                        }
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-              {[
-                ["deadline", "Límit de lliurament"],
-                ["judging_start", "Inici del jurat"],
-                ["judging_end", "Final del jurat"],
-              ].map(([key, label]) => (
-                <label key={key}>
-                  {label}
-                  <Input
-                    type="datetime-local"
-                    disabled={
-                      key === "deadline" && data.access_role !== "superadmin"
-                    }
-                    value={localDate(draft[key])}
-                    onChange={(e) =>
-                      update(
-                        key,
-                        e.target.value
-                          ? new Date(e.target.value).toISOString()
-                          : null,
-                      )
-                    }
-                  />
-                </label>
-              ))}
-              {[
-                ["slack_url", "Enllaç de Slack"],
-                ["stream_url", "Canal de retransmissió (URL)"],
-                ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
-                ["map_url", "Imatge del mapa (URL)"],
-              ].map(([key, label]) => (
-                <label key={key}>
-                  {label}
-                  <Input
-                    type="url"
-                    value={draft[key] || ""}
-                    onChange={(e) => update(key, e.target.value || null)}
-                  />
-                </label>
-              ))}
-              <label>
-                Nom de la xarxa Wi-Fi
-                <Input
-                  value={draft.wifi_name || ""}
-                  onChange={(e) => update("wifi_name", e.target.value)}
-                  maxLength={200}
-                />
-              </label>
-              <label>
-                Indicacions de connexió (públiques)
-                <Textarea
-                  value={draft.wifi_instructions || ""}
-                  onChange={(e) => update("wifi_instructions", e.target.value)}
-                  maxLength={2000}
-                />
-              </label>
-              <label>
-                Indicacions del mapa
-                <Textarea
-                  value={draft.map_notes}
-                  onChange={(e) => update("map_notes", e.target.value)}
-                />
-              </label>
-              <label>
-                Minuts per presentació
-                <Input
-                  type="number"
-                  min={1}
-                  value={draft.slot_minutes}
-                  onChange={(e) =>
-                    update("slot_minutes", Number(e.target.value))
-                  }
-                />
-              </label>
-              <label>
-                Minuts de desplaçament
-                <Input
-                  type="number"
-                  min={0}
-                  value={draft.travel_minutes}
-                  onChange={(e) =>
-                    update("travel_minutes", Number(e.target.value))
-                  }
-                />
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={draft.game_enabled}
-                  onChange={(e) => update("game_enabled", e.target.checked)}
-                />{" "}
-                Joc del tractor habilitat
-              </label>
-            </CardContent>
-          </Card>
-          {Object.entries(sections).map(([key, title]) => (
-            <Card key={key}>
+          {(tab === "live" || tab === "rooms") && (
+            <Card>
               <CardHeader>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle>
+                  {tab === "live"
+                    ? "Configuració del Live"
+                    : "Horaris del jurat"}
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {(draft[key] || []).map((item: Item, index: number) => (
-                  <div
-                    className="grid gap-3 rounded border p-4 md:grid-cols-2"
-                    key={index}
-                  >
-                    {Object.entries(templates[key])
-                      .filter(([field]) => field !== "resources")
-                      .map(([field, initial]) => (
-                        <label key={field}>
-                          {labels[field] || field}
-                          {typeof initial === "boolean" ? (
-                            <input
-                              className="ml-2"
-                              type="checkbox"
-                              checked={!!item[field]}
-                              onChange={(e) =>
-                                updateItem(key, index, field, e.target.checked)
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                {tab === "live" && (
+                  <>
+                    <label>
+                      Títol
+                      <Input
+                        value={draft.title}
+                        onChange={(e) => update("title", e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Fase
+                      <select
+                        className="block w-full rounded border p-2"
+                        value={draft.phase}
+                        onChange={(e) => update("phase", e.target.value)}
+                      >
+                        {["preparation", "hacking", "judging", "finished"].map(
+                          (v, i) => (
+                            <option value={v} key={v}>
+                              {
+                                [
+                                  "Preparació",
+                                  "Hacking",
+                                  "Presentacions",
+                                  "Finalitzat",
+                                ][i]
                               }
-                            />
-                          ) : (
-                            <Input
-                              disabled={
-                                data.access_role !== "superadmin" &&
-                                ["points", "cost", "stock"].includes(field)
-                              }
-                              required={
-                                field !== "description" && field !== "location"
-                              }
-                              type={
-                                typeof initial === "number"
-                                  ? "number"
-                                  : ["start", "end"].includes(field)
-                                    ? "datetime-local"
-                                    : "text"
-                              }
-                              value={
-                                ["start", "end"].includes(field)
-                                  ? localDate(item[field])
-                                  : (item[field] ?? "")
-                              }
-                              onChange={(e) =>
-                                updateItem(
-                                  key,
-                                  index,
-                                  field,
-                                  typeof initial === "number"
-                                    ? Number(e.target.value)
-                                    : ["start", "end"].includes(field)
-                                      ? e.target.value
-                                        ? new Date(e.target.value).toISOString()
-                                        : ""
-                                      : e.target.value,
-                                )
-                              }
-                            />
-                          )}
-                        </label>
-                      ))}
-                    {key === "challenges" && (
-                      <div className="space-y-2 md:col-span-2">
-                        {(item.resources || []).map((r: Item, j: number) => (
-                          <div className="flex gap-2" key={j}>
-                            <Input
-                              aria-label="Nom del recurs"
-                              placeholder="Nom del recurs"
-                              value={r.title}
-                              onChange={(e) =>
-                                updateItem(
-                                  key,
-                                  index,
-                                  "resources",
-                                  item.resources.map((v: Item, k: number) =>
-                                    j === k
-                                      ? { ...v, title: e.target.value }
-                                      : v,
-                                  ),
-                                )
-                              }
-                            />
-                            <Input
-                              aria-label="Enllaç del recurs"
-                              type="url"
-                              placeholder="https://…"
-                              value={r.url}
-                              onChange={(e) =>
-                                updateItem(
-                                  key,
-                                  index,
-                                  "resources",
-                                  item.resources.map((v: Item, k: number) =>
-                                    j === k ? { ...v, url: e.target.value } : v,
-                                  ),
-                                )
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() =>
-                                updateItem(
-                                  key,
-                                  index,
-                                  "resources",
-                                  item.resources.filter(
-                                    (_: Item, k: number) => k !== j,
-                                  ),
-                                )
-                              }
-                            >
-                              Treure
-                            </Button>
-                          </div>
-                        ))}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            updateItem(key, index, "resources", [
-                              ...(item.resources || []),
-                              { title: "", url: "" },
-                            ])
-                          }
-                        >
-                          Afegir recurs
-                        </Button>
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={
-                        data.access_role !== "superadmin" &&
-                        (key === "prizes" ||
-                          (key === "activities" && item.points > 0))
-                      }
-                      onClick={() =>
-                        update(
-                          key,
-                          draft[key].filter(
-                            (_: Item, i: number) => i !== index,
+                            </option>
                           ),
-                        )
-                      }
-                    >
-                      Treure
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={
-                    data.access_role !== "superadmin" && key === "prizes"
-                  }
-                  onClick={() =>
-                    update(key, [
-                      ...(draft[key] || []),
-                      structuredClone(templates[key]),
-                    ])
-                  }
-                >
-                  Afegir
-                </Button>
+                        )}
+                      </select>
+                    </label>
+                  </>
+                )}
+                {[
+                  ["deadline", "Límit de lliurament"],
+                  ["judging_start", "Inici del jurat"],
+                  ["judging_end", "Final del jurat"],
+                ]
+                  .filter(([key]) =>
+                    tab === "rooms" ? key !== "deadline" : key === "deadline",
+                  )
+                  .map(([key, label]) => (
+                    <label key={key}>
+                      {label}
+                      <Input
+                        type="datetime-local"
+                        disabled={
+                          key === "deadline" &&
+                          data.access_role !== "superadmin"
+                        }
+                        value={localDate(draft[key])}
+                        onChange={(e) =>
+                          update(
+                            key,
+                            e.target.value
+                              ? new Date(e.target.value).toISOString()
+                              : null,
+                          )
+                        }
+                      />
+                    </label>
+                  ))}
+                {tab === "live" && (
+                  <>
+                    {[
+                      ["slack_url", "Enllaç de Slack"],
+                      ["stream_url", "Canal de retransmissió (URL)"],
+                      ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
+                      ["map_url", "Imatge del mapa (URL)"],
+                    ].map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <Input
+                          type="url"
+                          value={draft[key] || ""}
+                          onChange={(e) => update(key, e.target.value || null)}
+                        />
+                      </label>
+                    ))}
+                    <label>
+                      Nom de la xarxa Wi-Fi
+                      <Input
+                        value={draft.wifi_name || ""}
+                        onChange={(e) => update("wifi_name", e.target.value)}
+                        maxLength={200}
+                      />
+                    </label>
+                    <label>
+                      Indicacions de connexió (públiques)
+                      <Textarea
+                        value={draft.wifi_instructions || ""}
+                        onChange={(e) =>
+                          update("wifi_instructions", e.target.value)
+                        }
+                        maxLength={2000}
+                      />
+                    </label>
+                    <label>
+                      Indicacions del mapa
+                      <Textarea
+                        value={draft.map_notes}
+                        onChange={(e) => update("map_notes", e.target.value)}
+                      />
+                    </label>
+                  </>
+                )}
+                {tab === "rooms" && (
+                  <>
+                    <label>
+                      Minuts per presentació
+                      <Input
+                        type="number"
+                        min={1}
+                        value={draft.slot_minutes}
+                        onChange={(e) =>
+                          update("slot_minutes", Number(e.target.value))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Minuts de desplaçament
+                      <Input
+                        type="number"
+                        min={0}
+                        value={draft.travel_minutes}
+                        onChange={(e) =>
+                          update("travel_minutes", Number(e.target.value))
+                        }
+                      />
+                    </label>
+                  </>
+                )}
+                {tab === "live" && (
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={draft.game_enabled}
+                      onChange={(e) => update("game_enabled", e.target.checked)}
+                    />{" "}
+                    Joc del tractor habilitat
+                  </label>
+                )}
               </CardContent>
             </Card>
-          ))}
+          )}
+          {Object.entries(sections)
+            .filter(([key]) => (tab === "live" ? key === "faqs" : key === tab))
+            .map(([key, title]) => (
+              <Card key={key}>
+                <CardHeader>
+                  <CardTitle>{title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(draft[key] || []).map((item: Item, index: number) => (
+                    <div
+                      className="grid gap-3 rounded border p-4 md:grid-cols-2"
+                      key={index}
+                    >
+                      {Object.entries(templates[key])
+                        .filter(([field]) => field !== "resources")
+                        .map(([field, initial]) => (
+                          <label key={field}>
+                            {labels[field] || field}
+                            {typeof initial === "boolean" ? (
+                              <input
+                                className="ml-2"
+                                type="checkbox"
+                                checked={!!item[field]}
+                                onChange={(e) =>
+                                  updateItem(
+                                    key,
+                                    index,
+                                    field,
+                                    e.target.checked,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <Input
+                                disabled={
+                                  data.access_role !== "superadmin" &&
+                                  ["points", "cost", "stock"].includes(field)
+                                }
+                                required={
+                                  field !== "description" &&
+                                  field !== "location"
+                                }
+                                type={
+                                  typeof initial === "number"
+                                    ? "number"
+                                    : ["start", "end"].includes(field)
+                                      ? "datetime-local"
+                                      : "text"
+                                }
+                                value={
+                                  ["start", "end"].includes(field)
+                                    ? localDate(item[field])
+                                    : (item[field] ?? "")
+                                }
+                                onChange={(e) =>
+                                  updateItem(
+                                    key,
+                                    index,
+                                    field,
+                                    typeof initial === "number"
+                                      ? Number(e.target.value)
+                                      : ["start", "end"].includes(field)
+                                        ? e.target.value
+                                          ? new Date(
+                                              e.target.value,
+                                            ).toISOString()
+                                          : ""
+                                        : e.target.value,
+                                  )
+                                }
+                              />
+                            )}
+                          </label>
+                        ))}
+                      {key === "challenges" && (
+                        <div className="space-y-2 md:col-span-2">
+                          {(item.resources || []).map((r: Item, j: number) => (
+                            <div className="flex gap-2" key={j}>
+                              <Input
+                                aria-label="Nom del recurs"
+                                placeholder="Nom del recurs"
+                                value={r.title}
+                                onChange={(e) =>
+                                  updateItem(
+                                    key,
+                                    index,
+                                    "resources",
+                                    item.resources.map((v: Item, k: number) =>
+                                      j === k
+                                        ? { ...v, title: e.target.value }
+                                        : v,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Input
+                                aria-label="Enllaç del recurs"
+                                type="url"
+                                placeholder="https://…"
+                                value={r.url}
+                                onChange={(e) =>
+                                  updateItem(
+                                    key,
+                                    index,
+                                    "resources",
+                                    item.resources.map((v: Item, k: number) =>
+                                      j === k
+                                        ? { ...v, url: e.target.value }
+                                        : v,
+                                    ),
+                                  )
+                                }
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() =>
+                                  updateItem(
+                                    key,
+                                    index,
+                                    "resources",
+                                    item.resources.filter(
+                                      (_: Item, k: number) => k !== j,
+                                    ),
+                                  )
+                                }
+                              >
+                                Treure
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              updateItem(key, index, "resources", [
+                                ...(item.resources || []),
+                                { title: "", url: "" },
+                              ])
+                            }
+                          >
+                            Afegir recurs
+                          </Button>
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={
+                          data.access_role !== "superadmin" &&
+                          (key === "prizes" ||
+                            (key === "activities" && item.points > 0))
+                        }
+                        onClick={() =>
+                          update(
+                            key,
+                            draft[key].filter(
+                              (_: Item, i: number) => i !== index,
+                            ),
+                          )
+                        }
+                      >
+                        Treure
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      data.access_role !== "superadmin" && key === "prizes"
+                    }
+                    onClick={() =>
+                      update(key, [
+                        ...(draft[key] || []),
+                        structuredClone(templates[key]),
+                      ])
+                    }
+                  >
+                    Afegir
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           <label>
             Motiu del canvi
             <Input

@@ -18,6 +18,17 @@ The Live content form also manages the public stream URL, Wi-Fi network name, pu
 
 ## Devpost submissions
 
-The Devpost tab imports the organizer's UTF-8 Projects data CSV. Map project URL/title, HackEPS team code, challenge, optional MLH, and submission status; explicitly confirm a completed-only export if it has no status column. Preview errors block the entire import. Existing presentation adjustments are preserved, and challenge/MLH differences require manual review in Presentacions. Newly linked teams receive unscheduled challenge/MLH turns; use the existing schedule generator afterward. Import operations appear as `devpost.import` in Traçabilitat.
+The Projectes i jurat → Devpost tab imports the organizer's UTF-8 Projects data CSV. Map project URL/title, HackEPS team code, challenge, optional MLH, and submission status; explicitly confirm a completed-only export if it has no status column. Preview errors block the entire import. Existing presentation adjustments are preserved, and challenge/MLH differences require manual review in Presentacions. Newly linked teams receive unscheduled challenge/MLH turns; use the existing schedule generator afterward. Import operations appear as `devpost.import` in Traçabilitat.
 
 Backend migration `20261106_devpost` is required. Configure custom Devpost questions for team code, challenge and MLH, and validate the column/status mapping against the actual organizer export before event use. No Devpost API credentials or scraping are used.
+
+
+## Event navigation
+
+Event tools are grouped into five areas: Participants (registrations, teams, check-in), Jornada (agenda, meals and rounds, coins, prizes, logistics), Projectes i jurat (challenges, Devpost, rooms/timing, queues), Comunicació (Live content, alerts, email), and Administració (event details, sponsors, statistics, registration history, operational audit). Each area remembers its last selected section while the event page is mounted. Global user permissions remain under Usuaris.
+
+The old all-in-one operations menu is removed. Each operation section loads independently; editing Live no longer exposes agenda, challenge, prize and room forms in one long page. Meal round controls are beside the existing meal tools. Operational audit loads when entering Administració → Traçabilitat.
+
+## Preliminary challenge choices
+
+In Projectes i jurat → Reptes, save challenge content, mark the intended challenges as published, then use Publicar reptes and Obrir elecció de repte. Hiding challenges also closes choices. The summary refreshes every ten seconds and shows counts and each team's choice. These preliminary choices do not create submissions or presentation turns; Devpost remains the final submission source.
