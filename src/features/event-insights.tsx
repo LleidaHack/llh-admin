@@ -644,9 +644,9 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Registrar un àpat per codi</CardTitle>
+        <CardTitle>Registrar un àpat amb acreditació</CardTitle>
         <CardDescription>
-          Marca que un participant ha recollit un àpat introduint el seu codi.
+          Introdueix el codi de l’acreditació física. Els tiquets d’entrada no són vàlids per als àpats.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -691,7 +691,7 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
           </Field>
           <Field className="w-auto">
             <FieldLabel htmlFor="meal-eat-code">
-              Codi del participant
+              Codi de l’acreditació
             </FieldLabel>
             <Input
               id="meal-eat-code"

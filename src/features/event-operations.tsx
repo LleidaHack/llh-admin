@@ -1,4 +1,5 @@
 "use client";
+import { EventMentors } from "./event-mentors";
 
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeChoices } from "./challenge-choices";
@@ -611,6 +612,7 @@ export function EventOperations({
       )}
       {tab === "meals" && (
         <div className="space-y-4">
+          <EventMentors base={base} />
           <p>
             Una recollida per persona i ronda. Obrir una ronda nova no esborra
             les anteriors.
@@ -959,7 +961,7 @@ export function EventOperations({
         <div className="space-y-4">
           <p>
             Una sala de repte per equip i MLH opcional. La generació evita
-            solapaments i respecta els torns fixats.
+            solapaments, respecta el temps de trasllat i compara diferents ordres per reduir la durada total. Els torns fixats o començats es conserven.
           </p>
           <form
             className="flex flex-wrap gap-2"
@@ -1026,6 +1028,14 @@ export function EventOperations({
           >
             Actualitzar
           </Button>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {data.rooms.map((room: Item) => {
+              const turns = data.presentations.filter((p: Item) => p.room === room.id);
+              const times = turns.filter((p: Item) => p.scheduled_at).map((p: Item) => Date.parse(p.scheduled_at));
+              const finish = times.length ? new Date(Math.max(...times) + data.slot_minutes * 60000).toLocaleTimeString("ca", { hour: "2-digit", minute: "2-digit" }) : null;
+              return <Card key={room.id}><CardContent className="pt-4"><strong>{room.title}</strong><p>{turns.length} equips{finish ? ` · Final previst: ${finish}` : " · Sense horari"}</p></CardContent></Card>;
+            })}
+          </div>
           {data.presentations.map((p: Item) => (
             <PresentationRow
               key={`${p.id}-${p.version}`}
@@ -1066,7 +1076,7 @@ export function EventOperations({
                   )
                 }
               >
-                {["superadmin", "admin", "lleidahacker", "hacker"].map(
+                {["superadmin", "admin", "lleidahacker", "hacker", "mentor"].map(
                   (role) => (
                     <option key={role} value={role}>
                       {role}

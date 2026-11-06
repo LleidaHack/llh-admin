@@ -1,3 +1,4 @@
+import { NicknameModeration } from "./nickname-moderation";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +90,7 @@ export function Users() {
           Consulta comptes i gestiona l'accés dels participants.
         </p>
       </div>
+      <NicknameModeration />
       <ErrorBox error={error} />
       <form
         onSubmit={(e) => {
