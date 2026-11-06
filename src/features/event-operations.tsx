@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DevpostImport } from "./devpost-import";
 import { request, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,6 +182,7 @@ export function EventOperations({ id }: { id: number }) {
           meals: "Rondes dels àpats",
           coins: "Punts i bescanvis",
           judging: "Presentacions",
+          devpost: "Devpost",
           alerts: "Avisos",
           audit: "Traçabilitat",
           roles: "Rols i permisos",
@@ -865,6 +867,15 @@ export function EventOperations({ id }: { id: number }) {
             </Card>
           ))}
         </div>
+      )}
+      {tab === "devpost" && (
+        <DevpostImport
+          key={id}
+          eventId={id}
+          challenges={data.challenges}
+          teams={data.teams}
+          onImported={load}
+        />
       )}
       {tab === "judging" && (
         <div className="space-y-4">
