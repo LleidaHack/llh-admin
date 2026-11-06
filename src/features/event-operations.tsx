@@ -111,7 +111,6 @@ export function EventOperations({
     [busy, setBusy] = useState(false);
   const [staff, setStaff] = useState<Item[]>([]);
   const tab = section;
-  const [reason, setReason] = useState("");
   const [history, setHistory] = useState<Item[]>([]),
     [historyAction, setHistoryAction] = useState("");
   const [scan, setScan] = useState({
@@ -253,7 +252,7 @@ export function EventOperations({
               request(base + "/config", "PUT", {
                 version: data.version,
                 config: draft,
-                reason,
+                reason: `Update ${tab} configuration from management`,
               }),
             );
           }}
@@ -598,15 +597,6 @@ export function EventOperations({
                 </CardContent>
               </Card>
             ))}
-          <label>
-            Motiu del canvi
-            <Input
-              required
-              minLength={3}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </label>
           <Button disabled={busy}>Desar configuració</Button>
         </form>
       )}
@@ -616,14 +606,6 @@ export function EventOperations({
             Una recollida per persona i ronda. Obrir una ronda nova no esborra
             les anteriors.
           </p>
-          <label>
-            Motiu del canvi
-            <Input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Hi ha racions disponibles"
-            />
-          </label>
           {data.meals.map((meal: Item) => {
             const r = data.meal_rounds?.[meal.id] || { round: 1, open: true };
             const counts = data.meal_counts?.find(
@@ -654,13 +636,13 @@ export function EventOperations({
                     ].map(([action, label]) => (
                       <Button
                         key={action}
-                        disabled={busy || reason.trim().length < 3}
+                        disabled={busy}
                         onClick={() =>
                           void run(() =>
                             request(`${base}/meals/${meal.id}/round`, "POST", {
                               action,
                               expected_round: r.round,
-                              reason,
+                              reason: `Meal ${meal.id}: ${action} round from management`,
                             }),
                           )
                         }
@@ -1035,10 +1017,6 @@ export function EventOperations({
             Els rols són globals. Només el superadmin els pot canviar; cada
             canvi queda registrat.
           </p>
-          <label>
-            Motiu
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
-          </label>
           {staff.map((user) => (
             <div
               key={user.id}
@@ -1066,12 +1044,12 @@ export function EventOperations({
                 )}
               </select>
               <Button
-                disabled={busy || reason.trim().length < 3}
+                disabled={busy}
                 onClick={() =>
                   void run(() =>
                     request(`${base}/staff/${user.id}`, "PATCH", {
                       role: user.role,
-                      reason,
+                      reason: `Assign ${user.role} role from management`,
                     }),
                   )
                 }
@@ -1151,14 +1129,13 @@ function PresentationRow({
     ...p,
     pinned: !!p.pinned,
     override: false,
-    reason: "",
   });
   return (
     <form
       className="grid gap-3 rounded border p-4 md:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
-        void save(draft);
+        void save({ ...draft, reason: draft.override ? "Override presentation constraints from management" : "Update presentation from management" });
       }}
     >
       <strong>{p.team}</strong>
@@ -1240,14 +1217,6 @@ function PresentationRow({
           Autoritzar excepció
         </label>
       </div>
-      <Input
-        required
-        minLength={3}
-        placeholder="Motiu del canvi"
-        aria-label="Motiu del canvi de torn"
-        value={draft.reason}
-        onChange={(e) => setDraft({ ...draft, reason: e.target.value })}
-      />
       <Button disabled={busy}>Aplicar canvi</Button>
     </form>
   );

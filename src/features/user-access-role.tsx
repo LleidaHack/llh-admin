@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { request, errorMessage, type Profile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 type Change = {
   id: number;
@@ -27,7 +26,6 @@ export function UserAccessRole({
 }) {
   const [viewer, setViewer] = useState<Profile | null>(null),
     [role, setRole] = useState(initialRole),
-    [reason, setReason] = useState(""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -76,21 +74,11 @@ export function UserAccessRole({
         </select>
       </label>
       <p>{descriptions[role]}</p>
-      <label className="block">
-        Motiu del canvi
-        <Input
-          value={reason}
-          minLength={3}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Assignació de responsabilitats"
-        />
-      </label>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <Button
         disabled={
           busy ||
-          reason.trim().length < 3 ||
           (viewer.id === userId && role !== "superadmin")
         }
         onClick={async () => {
@@ -102,7 +90,7 @@ export function UserAccessRole({
           try {
             await request(`/v1/access/users/${userId}/role`, "PATCH", {
               role,
-              reason,
+              reason: `Assign ${role} role from user management`,
             });
             setNotice(
               "Rol actualitzat. Els permisos ja s’apliquen a la sessió actual.",
