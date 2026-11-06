@@ -34,6 +34,13 @@ const templates: Record<string, Item> = {
     published: false,
     resources: [],
   },
+  decoy_challenges: {
+    id: "",
+    title: "",
+    description: "",
+    published: false,
+    resources: [],
+  },
   activities: {
     id: "",
     title: "",
@@ -48,7 +55,8 @@ const templates: Record<string, Item> = {
   rooms: { id: "", title: "", paused: false },
 };
 const sections: Record<string, string> = {
-  challenges: "Reptes i recursos",
+  challenges: "Reptes reals i recursos",
+  decoy_challenges: "Reptes esquer · abans de la publicació",
   activities: "Agenda i activitats",
   faqs: "Preguntes freqüents",
   prizes: "Premis",
@@ -218,7 +226,8 @@ export function EventOperations({
         <ChallengeChoices
           id={id}
           version={data.version}
-          published={data.challenges_released ?? true}
+          published={data.challenges_released ?? false}
+          canPublish={data.access_role === "superadmin"}
           open={data.challenge_votes_open ?? false}
           onChange={load}
         />
@@ -406,7 +415,7 @@ export function EventOperations({
             </Card>
           )}
           {Object.entries(sections)
-            .filter(([key]) => (tab === "live" ? key === "faqs" : key === tab))
+            .filter(([key]) => (tab === "live" ? key === "faqs" : tab === "challenges" ? ["challenges", "decoy_challenges"].includes(key) : key === tab))
             .map(([key, title]) => (
               <Card key={key}>
                 <CardHeader>
@@ -479,7 +488,7 @@ export function EventOperations({
                             )}
                           </label>
                         ))}
-                      {key === "challenges" && (
+                      {["challenges", "decoy_challenges"].includes(key) && (
                         <div className="space-y-2 md:col-span-2">
                           {(item.resources || []).map((r: Item, j: number) => (
                             <div className="flex gap-2" key={j}>

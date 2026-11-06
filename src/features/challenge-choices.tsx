@@ -14,12 +14,14 @@ export function ChallengeChoices({
   id,
   version,
   published,
+  canPublish,
   open,
   onChange,
 }: {
   id: number;
   version: number;
   published: boolean;
+  canPublish: boolean;
   open: boolean;
   onChange: () => Promise<void>;
 }) {
@@ -74,17 +76,18 @@ export function ChallengeChoices({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm">
-          Reptes {published ? "visibles" : "ocults"} · Elecció{" "}
+          Reptes reals {published ? "visibles" : "ocults"} · Elecció{" "}
           {open ? "oberta" : "tancada"}
         </p>
         <p className="text-sm text-muted-foreground">
-          Desa els reptes abans de publicar-los. Només es mostren els marcats
-          com a publicats. Una elecció orientativa per equip, modificable mentre
-          estigui oberta; no crea entregues ni torns del jurat.
+          Abans de publicar, el Live només mostra els reptes esquer marcats com a publicats.
+          Els reals i els seus recursos queden reservats a Gestió. Només un superadmin
+          pot revelar-los. Desa els canvis abans de publicar; només es revelen els
+          reptes reals marcats com a publicats. Els esquers no es poden votar.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
-            disabled={busy}
+            disabled={busy || !canPublish}
             variant={published ? "outline" : "default"}
             onClick={() => void update(!published, false)}
           >
