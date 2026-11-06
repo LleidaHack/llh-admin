@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChallengeChoices } from "./challenge-choices";
+import { DiscordCardEditor, emptyDiscordCard } from "./discord-card-editor";
 import { DevpostImport } from "./devpost-import";
 import { request, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -132,8 +133,10 @@ export function EventOperations({
   });
   const [discord, setDiscord] = useState<{
     configured: boolean;
+    mode?: "webhook" | "bot" | null;
     deliveries: Item[];
   } | null>(null);
+  const [discordCard, setDiscordCard] = useState(emptyDiscordCard);
   const [alertMinutes, setAlertMinutes] = useState(60);
   const [enroll, setEnroll] = useState({
     group: "",
@@ -333,7 +336,7 @@ export function EventOperations({
                 {tab === "live" && (
                   <>
                     {[
-                      ["slack_url", "Enllaç de Slack"],
+                      ["slack_url", "Invitació de Discord"],
                       ["stream_url", "Canal de retransmissió (URL)"],
                       ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
                       ["map_url", "Imatge del mapa (URL)"],
@@ -414,7 +417,13 @@ export function EventOperations({
             </Card>
           )}
           {Object.entries(sections)
-            .filter(([key]) => (tab === "live" ? key === "faqs" : tab === "challenges" ? ["challenges", "decoy_challenges"].includes(key) : key === tab))
+            .filter(([key]) =>
+              tab === "live"
+                ? key === "faqs"
+                : tab === "challenges"
+                  ? ["challenges", "decoy_challenges"].includes(key)
+                  : key === tab,
+            )
             .map(([key, title]) => (
               <Card key={key}>
                 <CardHeader>
@@ -775,6 +784,16 @@ export function EventOperations({
                 () =>
                   request(base + "/alerts", "POST", {
                     ...alert,
+                    discord_card: alert.discord
+                      ? discordCard.enabled
+                        ? {
+                            ...discordCard,
+                            url: discordCard.url || null,
+                            image_url: discordCard.image_url || null,
+                            thumbnail_url: discordCard.thumbnail_url || null,
+                          }
+                        : { enabled: false }
+                      : undefined,
                     expires_at: new Date(
                       Date.now() + alertMinutes * 60000,
                     ).toISOString(),
@@ -827,18 +846,19 @@ export function EventOperations({
                     setAlert({ ...alert, discord: e.target.checked })
                   }
                 />{" "}
-                Bot de Discord · canal oficial
+                Discord · canal oficial
               </label>
             </fieldset>
             {alert.discord && !discord?.configured && (
               <p role="status">
-                El bot encara no està connectat. L’avís quedarà pendent fins que
-                es connecti o caduqui.
+                Discord no està configurat per a aquest esdeveniment. L’avís
+                quedarà pendent fins que es connecti o caduqui.
               </p>
             )}
             <Input
               required
               placeholder="Títol"
+              maxLength={150}
               aria-label="Títol de l'avís"
               value={alert.title}
               onChange={(e) => setAlert({ ...alert, title: e.target.value })}
@@ -846,6 +866,7 @@ export function EventOperations({
             <Textarea
               required
               placeholder="Missatge"
+              maxLength={2000}
               aria-label="Missatge de l'avís"
               value={alert.message}
               onChange={(e) => setAlert({ ...alert, message: e.target.value })}
@@ -866,6 +887,14 @@ export function EventOperations({
               />{" "}
               Enviar també notificació push
             </label>
+            {alert.discord && (
+              <DiscordCardEditor
+                card={discordCard}
+                onChange={setDiscordCard}
+                title={alert.title}
+                message={alert.message}
+              />
+            )}
             <Button
               disabled={busy || !(alert.live || alert.push || alert.discord)}
             >
@@ -876,7 +905,9 @@ export function EventOperations({
             <h3 className="font-semibold">Entregues a Discord</h3>
             <p>
               {discord?.configured
-                ? "Integració configurada; esperant el bot o les seves confirmacions."
+                ? discord.mode === "webhook"
+                  ? "Webhook configurat. Consulta les confirmacions d’entrega a sota."
+                  : "Bot configurat. Consulta les confirmacions d’entrega a sota."
                 : "Integració pendent de configurar."}
             </p>
             {discord?.deliveries.map((d) => (
@@ -1135,7 +1166,12 @@ function PresentationRow({
       className="grid gap-3 rounded border p-4 md:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
-        void save({ ...draft, reason: draft.override ? "Override presentation constraints from management" : "Update presentation from management" });
+        void save({
+          ...draft,
+          reason: draft.override
+            ? "Override presentation constraints from management"
+            : "Update presentation from management",
+        });
       }}
     >
       <strong>{p.team}</strong>
