@@ -1358,6 +1358,7 @@ export function EventDetail({
       )}
       {detail && (
         <ParticipantDetailDialog
+          key={`${id}:${detail.id}`}
           eventId={id}
           participant={detail}
           onClose={() => setDetail(null)}
