@@ -32,3 +32,7 @@ The old all-in-one operations menu is removed. Each operation section loads inde
 ## Preliminary challenge choices
 
 In Projectes i jurat → Reptes, save challenge content, mark the intended challenges as published, then use Publicar reptes and Obrir elecció de repte. Hiding challenges also closes choices. The summary refreshes every ten seconds and shows counts and each team's choice. These preliminary choices do not create submissions or presentation turns; Devpost remains the final submission source.
+
+## Manual YouTube broadcast
+
+Comunicació → Live accepts a YouTube video URL and a **Mostrar retransmissió** switch. Save to publish or hide the embedded player. The switch defaults to false and requires a valid YouTube video link when enabled. Organizers must disable it after the stream ends; no automatic live-status detection or Google API key is involved. Live starts playback muted, subject to browser policy. Deploy the backend configuration update before the clients; the JSON configuration requires no database migration.

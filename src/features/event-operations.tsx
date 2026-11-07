@@ -338,7 +338,7 @@ export function EventOperations({
                   <>
                     {[
                       ["slack_url", "Invitació de Discord"],
-                      ["stream_url", "Canal de retransmissió (URL)"],
+                      ["stream_url", "Enllaç del vídeo en directe de YouTube (URL)"],
                       ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
                       ["map_url", "Imatge del mapa (URL)"],
                     ].map(([key, label]) => (
@@ -351,6 +351,16 @@ export function EventOperations({
                         />
                       </label>
                     ))}
+                    <Button
+                      type="button"
+                      role="switch"
+                      aria-checked={!!draft.stream_enabled}
+                      onClick={() => update("stream_enabled", !draft.stream_enabled)}
+                      variant={draft.stream_enabled ? "default" : "outline"}
+                    >
+                      Mostrar retransmissió: {draft.stream_enabled ? "Sí" : "No"}
+                    </Button>
+                    <p>Enganxa l’enllaç del vídeo i activa la retransmissió quan comenci. Desa els canvis. Desactiva-la quan acabi; no es detecta automàticament.</p>
                     <label>
                       Nom de la xarxa Wi-Fi
                       <Input
