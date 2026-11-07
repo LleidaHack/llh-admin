@@ -1,5 +1,7 @@
 "use client";
 import { EventOperations, type OperationSection } from "./event-operations";
+import { useCanRunCritical } from "@/lib/viewer";
+import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
@@ -213,6 +215,8 @@ export function EventDetail({
   onBack: () => void;
   reloadEvents: () => Promise<void>;
 }) {
+  // Deleting/unlinking records is superadmin-only on the backend.
+  const critical = useCanRunCritical();
   const [event, setEvent] = useState<EventRecord>(),
     [participants, setParticipants] = useState<Participant[]>([]),
     [teams, setTeams] = useState<Team[]>([]),
@@ -243,6 +247,8 @@ export function EventDetail({
     group.items.some(([value]) => value === activeSection),
   )!;
   const selectSection = (value: string) => {
+    if (value !== activeSection && !confirmDiscardUnsaved()) return;
+    setUnsavedChanges(false);
     setActiveSection(value);
     const group = eventMenu.find((group) =>
       group.items.some(([key]) => key === value),
@@ -1105,19 +1111,21 @@ export function EventDetail({
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          confirm(
-                            `Desvincular ${c.name}`,
-                            `/v1/event/${id}/sponsors/${c.id}`,
-                            "DELETE",
-                          )
-                        }
-                      >
-                        Desvincular
-                      </Button>
+                      {critical && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            confirm(
+                              `Desvincular ${c.name}`,
+                              `/v1/event/${id}/sponsors/${c.id}`,
+                              "DELETE",
+                            )
+                          }
+                        >
+                          Desvincular
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1158,19 +1166,21 @@ export function EventDetail({
                         >
                           Editar
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            confirm(
-                              `Eliminar ${m.name}`,
-                              `/v1/meal/${m.id}`,
-                              "DELETE",
-                            )
-                          }
-                        >
-                          Eliminar
-                        </Button>
+                        {critical && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              confirm(
+                                `Eliminar ${m.name}`,
+                                `/v1/meal/${m.id}`,
+                                "DELETE",
+                              )
+                            }
+                          >
+                            Eliminar
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1277,24 +1287,26 @@ export function EventDetail({
               </dl>
             </CardContent>
           </Card>
-          <Button
-            variant="destructive"
-            className="self-start"
-            onClick={() =>
-              setConfirmation({
-                title: `Eliminar ${event.name}`,
-                description:
-                  "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
-                run: async () => {
-                  await request(`/v1/event/${id}`, "DELETE");
-                  await reloadEvents();
-                  onBack();
-                },
-              })
-            }
-          >
-            Eliminar l'esdeveniment
-          </Button>
+          {critical && (
+            <Button
+              variant="destructive"
+              className="self-start"
+              onClick={() =>
+                setConfirmation({
+                  title: `Eliminar ${event.name}`,
+                  description:
+                    "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
+                  run: async () => {
+                    await request(`/v1/event/${id}`, "DELETE");
+                    await reloadEvents();
+                    onBack();
+                  },
+                })
+              }
+            >
+              Eliminar l'esdeveniment
+            </Button>
+          )}
         </TabsContent>
       </Tabs>
       {editing && (

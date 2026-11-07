@@ -1,4 +1,5 @@
 import { dateTimeLabel } from "@/lib/events";
+import { useCanRunCritical } from "@/lib/viewer";
 import { useCallback, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ export function ParticipantNotes({
   hackerId: number;
   onChange?: () => void;
 }) {
+  // Deleting notes is superadmin-only on the backend.
+  const critical = useCanRunCritical();
   const [notes, setNotes] = useState<ParticipantNote[] | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -73,19 +76,24 @@ export function ParticipantNotes({
               · {dateTimeLabel(note.created_at)}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Esborrar la nota"
-            disabled={busy}
-            onClick={() =>
-              void run(() =>
-                request(`/v1/event/${eventId}/notes/item/${note.id}`, "DELETE"),
-              )
-            }
-          >
-            <Trash2 />
-          </Button>
+          {critical && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Esborrar la nota"
+              disabled={busy}
+              onClick={() =>
+                void run(() =>
+                  request(
+                    `/v1/event/${eventId}/notes/item/${note.id}`,
+                    "DELETE",
+                  ),
+                )
+              }
+            >
+              <Trash2 />
+            </Button>
+          )}
         </div>
       ))}
       <form

@@ -1,4 +1,5 @@
 import { NicknameModeration } from "./nickname-moderation";
+import { useCanRunCritical } from "@/lib/viewer";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,8 @@ import {
   ConfirmDialog,
 } from "@/components/shared";
 export function Users() {
+  // Ban/unban and force-verify are superadmin-only on the backend.
+  const critical = useCanRunCritical();
   const [items, setItems] = useState<User[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -159,16 +162,18 @@ export function Users() {
                 <span className="text-sm">
                   ID: {selected.id} · Codi: {selected.code}
                 </span>
-                {selected.is_verified === false && selected.id != null && (
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => setOperation("verify")}
-                  >
-                    Verificar compte
-                  </Button>
-                )}
-                {selected.type === "hacker" && (
+                {critical &&
+                  selected.is_verified === false &&
+                  selected.id != null && (
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => setOperation("verify")}
+                    >
+                      Verificar compte
+                    </Button>
+                  )}
+                {critical && selected.type === "hacker" && (
                   <>
                     <Button
                       variant="outline"

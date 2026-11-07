@@ -6,7 +6,8 @@ vi.stubGlobal("sessionStorage", {
   removeItem: (k: string) => storage.delete(k),
 });
 vi.stubGlobal("window", { dispatchEvent: vi.fn() });
-const { request, login, hasSession, clearSession } = await import("./api");
+const { request, login, hasSession, clearSession, canRunCritical } =
+  await import("./api");
 beforeEach(() => {
   clearSession();
   vi.stubGlobal("fetch", vi.fn());
@@ -102,6 +103,38 @@ describe("management access roles", () => {
       "organitzador",
     );
     expect(hasSession()).toBe(false);
+  });
+  it("accepts organizers from a backend that does not send access roles yet", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token" })),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ type: "lleida_hacker" })),
+      );
+    await login("organizer@example.test", "password");
+    expect(hasSession()).toBe(true);
+  });
+  it("rejects participants from a backend without access roles", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token" })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ type: "hacker" })));
+    await expect(login("hacker@example.test", "password")).rejects.toThrow(
+      "organitzador",
+    );
+  });
+});
+
+describe("critical action visibility", () => {
+  it.each([
+    [{ access_role: "superadmin" }, true],
+    [{ access_role: "admin" }, false],
+    [{ type: "lleida_hacker" }, true],
+    [{ type: "hacker" }, false],
+  ])("%o -> %s", (profile, expected) => {
+    expect(canRunCritical(profile)).toBe(expected);
   });
 });
 

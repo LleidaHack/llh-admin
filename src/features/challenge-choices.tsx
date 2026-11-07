@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { request, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ export function ChallengeChoices({
   version,
   published,
   canPublish,
+  blocked = false,
   open,
   onChange,
 }: {
@@ -22,21 +23,30 @@ export function ChallengeChoices({
   version: number;
   published: boolean;
   canPublish: boolean;
+  // True while the configuration form has unsaved edits: publishing reloads
+  // the configuration and would discard them.
+  blocked?: boolean;
   open: boolean;
   onChange: () => Promise<void>;
 }) {
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState("");
+  const pollError = useRef("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
     const refresh = () =>
       request<Results>(`/v1/operations/${id}/challenge-votes`)
         .then((r) => {
-          if (active) setResults(r);
+          if (!active) return;
+          setResults(r);
+          // Clear a previous polling error once polling recovers.
+          setError((current) => (current === pollError.current ? "" : current));
         })
         .catch((e) => {
-          if (active) setError(errorMessage(e));
+          if (!active) return;
+          pollError.current = errorMessage(e);
+          setError(pollError.current);
         });
     void refresh();
     const timer = setInterval(refresh, 10000);
@@ -80,27 +90,34 @@ export function ChallengeChoices({
           {open ? "oberta" : "tancada"}
         </p>
         <p className="text-sm text-muted-foreground">
-          Abans de publicar, el Live només mostra els reptes esquer marcats com a publicats.
-          Els reals i els seus recursos queden reservats a Gestió. Només un superadmin
-          pot revelar-los. Desa els canvis abans de publicar; només es revelen els
-          reptes reals marcats com a publicats. Els esquers no es poden votar.
+          Abans de publicar, el Live només mostra els reptes esquer marcats com
+          a publicats. Els reals i els seus recursos queden reservats a Gestió.
+          Només un superadmin pot revelar-los. Desa els canvis abans de
+          publicar; només es revelen els reptes reals marcats com a publicats.
+          Els esquers no es poden votar.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
-            disabled={busy || !canPublish}
+            disabled={busy || blocked || !canPublish}
             variant={published ? "outline" : "default"}
             onClick={() => void update(!published, false)}
           >
             {published ? "Ocultar reptes" : "Publicar reptes"}
           </Button>
           <Button
-            disabled={busy || !published}
+            disabled={busy || blocked || !published}
             variant={open ? "outline" : "default"}
             onClick={() => void update(published, !open)}
           >
             {open ? "Tancar elecció de repte" : "Obrir elecció de repte"}
           </Button>
         </div>
+        {blocked && (
+          <p role="status" className="text-sm">
+            Desa o descarta els canvis de configuració abans de publicar o obrir
+            l’elecció.
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-destructive">
             {error}

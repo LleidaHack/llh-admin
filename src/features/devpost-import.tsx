@@ -154,9 +154,16 @@ export function DevpostImport({
     }
     setBusy(true);
     try {
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(
-        await file.arrayBuffer(),
-      );
+      let text: string;
+      try {
+        text = new TextDecoder("utf-8", { fatal: true }).decode(
+          await file.arrayBuffer(),
+        );
+      } catch {
+        throw new Error(
+          "El fitxer no està en UTF-8. Exporta’l de nou des de Devpost o desa’l com a «CSV UTF-8».",
+        );
+      }
       const result = await request<Preview>(base + "/preview", "POST", {
         csv_text: text,
         filename: file.name,

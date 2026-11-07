@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCanRunCritical } from "@/lib/viewer";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ import {
 } from "@/components/shared";
 import { request, errorMessage, type Company } from "@/lib/api";
 export function Companies() {
+  // Deleting companies is superadmin-only on the backend.
+  const critical = useCanRunCritical();
   const [items, setItems] = useState<Company[]>([]),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
@@ -101,13 +104,15 @@ export function Companies() {
                     >
                       Editar
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRemove(c)}
-                    >
-                      Eliminar
-                    </Button>
+                    {critical && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRemove(c)}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

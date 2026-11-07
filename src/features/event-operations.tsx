@@ -1,11 +1,12 @@
 "use client";
 import { EventMentors } from "./event-mentors";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { setUnsavedChanges } from "@/lib/unsaved";
 import { ChallengeChoices } from "./challenge-choices";
 import { DiscordCardEditor, emptyDiscordCard } from "./discord-card-editor";
 import { DevpostImport } from "./devpost-import";
-import { request, errorMessage } from "@/lib/api";
+import { ApiError, request, errorMessage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -144,6 +145,7 @@ export function EventOperations({
     challenge: "",
     mlh: false,
   });
+  const scanAttempt = useRef<{ key: string; id: string } | null>(null);
   const load = useCallback(async () => {
     const result = await request<Item>(`/v1/operations/${id}/manage`);
     setData(result);
@@ -158,6 +160,16 @@ export function EventOperations({
   useEffect(() => {
     load().catch((e) => setError(errorMessage(e)));
   }, [load]);
+  const dirty =
+    !!data && !!draft && JSON.stringify(draft) !== JSON.stringify(data);
+  useEffect(() => {
+    setUnsavedChanges(dirty);
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  useEffect(() => () => setUnsavedChanges(false), []);
   useEffect(() => {
     if (tab !== "alerts") return;
     let active = true;
@@ -176,7 +188,20 @@ export function EventOperations({
       clearInterval(timer);
     };
   }, [id, tab]);
-  async function run(fn: () => Promise<unknown>, message = "Canvi desat") {
+  async function run(
+    fn: () => Promise<unknown>,
+    message = "Canvi desat",
+    opts: { save?: boolean } = {},
+  ) {
+    // Every action reloads the configuration, which replaces the draft.
+    if (
+      !opts.save &&
+      dirty &&
+      !window.confirm(
+        "Tens canvis de configuració sense desar. Aquesta acció els descartarà. Vols continuar?",
+      )
+    )
+      return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -231,6 +256,7 @@ export function EventOperations({
           version={data.version}
           published={data.challenges_released ?? false}
           canPublish={data.access_role === "superadmin"}
+          blocked={dirty}
           open={data.challenge_votes_open ?? false}
           onChange={load}
         />
@@ -252,18 +278,29 @@ export function EventOperations({
           className="space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
-            void run(() =>
-              request(base + "/config", "PUT", {
-                version: data.version,
-                config: draft,
-                reason: `Update ${tab} configuration from management`,
-              }),
+            void run(
+              () =>
+                request(base + "/config", "PUT", {
+                  version: data.version,
+                  config: draft,
+                  reason: `Update ${tab} configuration from management`,
+                }),
+              "Canvi desat",
+              { save: true },
             );
           }}
         >
-          <div className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md" aria-label="Desar configuració">
+          <div
+            className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
+            aria-label="Desar configuració"
+          >
             <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
-              {busy ? "Desant…" : error || (JSON.stringify(draft) !== JSON.stringify(data) ? "Canvis pendents de desar" : notice || "Configuració desada")}
+              {busy
+                ? "Desant…"
+                : error ||
+                  (dirty
+                    ? "Canvis pendents de desar"
+                    : notice || "Configuració desada")}
             </p>
             <Button type="submit" disabled={busy} className="shrink-0">
               {busy ? "Desant…" : "Desar configuració"}
@@ -346,7 +383,10 @@ export function EventOperations({
                   <>
                     {[
                       ["slack_url", "Invitació de Discord"],
-                      ["stream_url", "Enllaç del vídeo en directe de YouTube (URL)"],
+                      [
+                        "stream_url",
+                        "Enllaç del vídeo en directe de YouTube (URL)",
+                      ],
                       ["wifi_guide_url", "Guia de connexió Wi-Fi (URL)"],
                       ["map_url", "Imatge del mapa (URL)"],
                     ].map(([key, label]) => (
@@ -363,12 +403,19 @@ export function EventOperations({
                       type="button"
                       role="switch"
                       aria-checked={!!draft.stream_enabled}
-                      onClick={() => update("stream_enabled", !draft.stream_enabled)}
+                      onClick={() =>
+                        update("stream_enabled", !draft.stream_enabled)
+                      }
                       variant={draft.stream_enabled ? "default" : "outline"}
                     >
-                      Mostrar retransmissió: {draft.stream_enabled ? "Sí" : "No"}
+                      Mostrar retransmissió:{" "}
+                      {draft.stream_enabled ? "Sí" : "No"}
                     </Button>
-                    <p>Enganxa l’enllaç del vídeo i activa la retransmissió quan comenci. Desa els canvis. Desactiva-la quan acabi; no es detecta automàticament.</p>
+                    <p>
+                      Enganxa l’enllaç del vídeo i activa la retransmissió quan
+                      comenci. Desa els canvis. Desactiva-la quan acabi; no es
+                      detecta automàticament.
+                    </p>
                     <label>
                       Nom de la xarxa Wi-Fi
                       <Input
@@ -666,6 +713,9 @@ export function EventOperations({
                         key={action}
                         disabled={busy}
                         onClick={() =>
+                          window.confirm(
+                            `${label} de ${meal.name}? Els escàners hauran d’actualitzar abans de continuar.`,
+                          ) &&
                           void run(() =>
                             request(`${base}/meals/${meal.id}/round`, "POST", {
                               action,
@@ -690,22 +740,46 @@ export function EventOperations({
           className="grid max-w-xl gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (
-              scan.kind === "redeem" &&
-              !window.confirm(
+            const confirmations: Record<string, string> = {
+              redeem:
                 "Confirmar el lliurament del premi i el descompte de punts?",
-              )
+              reverse:
+                "Corregir aquest moviment? Es registrarà un moviment invers.",
+              void_scan: "Anul·lar aquesta entrega d’àpat?",
+            };
+            if (
+              confirmations[scan.kind] &&
+              !window.confirm(confirmations[scan.kind])
             )
               return;
+            const payload = {
+              ...scan,
+              amount: scan.kind === "award" ? scan.amount : 0,
+              device: "llh-admin",
+            };
+            // Reuse the operation_id when the same request is resent after a
+            // failure, so a lost response cannot apply the operation twice.
+            const key = JSON.stringify(payload);
+            if (scanAttempt.current?.key !== key)
+              scanAttempt.current = { key, id: crypto.randomUUID() };
+            const operationId = scanAttempt.current.id;
             void run(async () => {
-              const result = await request<Item>(base + "/scan", "POST", {
-                ...scan,
-                amount: scan.kind === "award" ? scan.amount : 0,
-                operation_id: crypto.randomUUID(),
-                device: "llh-admin",
-              });
-              setScan((s) => ({ ...s, code: "" }));
-              return result;
+              try {
+                const result = await request<Item>(base + "/scan", "POST", {
+                  ...payload,
+                  operation_id: operationId,
+                });
+                scanAttempt.current = null;
+                setScan((s) => ({ ...s, code: "" }));
+                return result;
+              } catch (e) {
+                // Definitive rejections get a fresh id on the next attempt;
+                // ambiguous failures (network, 5xx, 408, 429) keep it.
+                const status = e instanceof ApiError ? e.status : 0;
+                if (status > 0 && status < 500 && ![408, 429].includes(status))
+                  scanAttempt.current = null;
+                throw e;
+              }
             }, "Operació registrada al historial");
           }}
         >
@@ -955,6 +1029,9 @@ export function EventOperations({
                   variant="outline"
                   disabled={busy}
                   onClick={() =>
+                    window.confirm(
+                      "Retirar l’avís? Desapareix del Live i es cancel·len els enviaments pendents (push i Discord). Els ja enviats no es poden desfer.",
+                    ) &&
                     void run(() => request(base + `/alerts/${a.id}`, "DELETE"))
                   }
                 >
@@ -978,7 +1055,9 @@ export function EventOperations({
         <div className="space-y-4">
           <p>
             Una sala de repte per equip i MLH opcional. La generació evita
-            solapaments, respecta el temps de trasllat i compara diferents ordres per reduir la durada total. Els torns fixats o començats es conserven.
+            solapaments, respecta el temps de trasllat i compara diferents
+            ordres per reduir la durada total. Els torns fixats o començats es
+            conserven.
           </p>
           <form
             className="flex flex-wrap gap-2"
@@ -1035,7 +1114,11 @@ export function EventOperations({
           </form>
           <Button
             disabled={busy}
-            onClick={() => void run(() => request(base + "/schedule", "POST"))}
+            onClick={() =>
+              window.confirm(
+                "Recalcular els horaris? Es reassignaran tots els torns pendents que no estiguin fixats.",
+              ) && void run(() => request(base + "/schedule", "POST"))
+            }
           >
             Generar / recalcular horaris
           </Button>
@@ -1047,10 +1130,33 @@ export function EventOperations({
           </Button>
           <div className="grid gap-3 sm:grid-cols-3">
             {data.rooms.map((room: Item) => {
-              const turns = data.presentations.filter((p: Item) => p.room === room.id);
-              const times = turns.filter((p: Item) => p.scheduled_at).map((p: Item) => Date.parse(p.scheduled_at));
-              const finish = times.length ? new Date(Math.max(...times) + data.slot_minutes * 60000).toLocaleTimeString("ca", { hour: "2-digit", minute: "2-digit" }) : null;
-              return <Card key={room.id}><CardContent className="pt-4"><strong>{room.title}</strong><p>{turns.length} equips{finish ? ` · Final previst: ${finish}` : " · Sense horari"}</p></CardContent></Card>;
+              const turns = data.presentations.filter(
+                (p: Item) => p.room === room.id,
+              );
+              const times = turns
+                .filter((p: Item) => p.scheduled_at)
+                .map((p: Item) => Date.parse(p.scheduled_at));
+              const finish = times.length
+                ? new Date(
+                    Math.max(...times) + data.slot_minutes * 60000,
+                  ).toLocaleTimeString("ca", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : null;
+              return (
+                <Card key={room.id}>
+                  <CardContent className="pt-4">
+                    <strong>{room.title}</strong>
+                    <p>
+                      {turns.length} equips
+                      {finish
+                        ? ` · Final previst: ${finish}`
+                        : " · Sense horari"}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
             })}
           </div>
           {data.presentations.map((p: Item) => (
@@ -1093,13 +1199,17 @@ export function EventOperations({
                   )
                 }
               >
-                {["superadmin", "admin", "lleidahacker", "hacker", "mentor"].map(
-                  (role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ),
-                )}
+                {[
+                  "superadmin",
+                  "admin",
+                  "lleidahacker",
+                  "hacker",
+                  "mentor",
+                ].map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
               </select>
               <Button
                 disabled={busy}
