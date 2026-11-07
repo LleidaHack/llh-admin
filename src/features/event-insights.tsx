@@ -41,7 +41,7 @@ import {
 } from "@/lib/api";
 import { UserAccountProfile, type UserProfile } from "./user-profile";
 import { ParticipantNotes } from "./participant-notes";
-import { studyCenter } from "@/lib/study-centers";
+import { groupEventStatistics, statisticLabels } from "@/lib/event-statistics";
 
 // The backend returns these endpoints as untyped dicts/lists, so render whatever
 // shape comes back generically instead of hard-coding fields that may drift.
@@ -49,7 +49,10 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 function humanize(key: string) {
-  return key.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  return (
+    statisticLabels[key] ??
+    key.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase())
+  );
 }
 function Primitive({ value }: { value: unknown }) {
   if (value === null || value === undefined)
@@ -166,24 +169,6 @@ function Section({
   );
 }
 
-// The backend lists every study_center as typed; count them per institution.
-function groupStudyCenters(data: unknown): unknown {
-  if (!isPlainObject(data) || !Array.isArray(data.study_center)) return data;
-  const counts = new Map<string, number>();
-  for (const raw of data.study_center) {
-    const label =
-      studyCenter(typeof raw === "string" ? raw : null)?.label ??
-      "Sense especificar";
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  }
-  return {
-    ...data,
-    study_center: Object.fromEntries(
-      [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
-    ),
-  };
-}
-
 export function StatisticsTab({ id }: { id: number }) {
   const stats = useResource<unknown>(`/v1/event/${id}/statistics`);
   const unregistered = useResource<unknown>(
@@ -193,7 +178,7 @@ export function StatisticsTab({ id }: { id: number }) {
     <div className="flex flex-col gap-5">
       <Section
         title="Estadístiques de l'esdeveniment"
-        description="Dades agregades calculades al servidor."
+        description="Participants acceptats agrupats per resposta. S’unifiquen majúscules, accents i espais; els valors es mostren de més a menys freqüents."
         loading={stats.loading}
         error={stats.error}
         onReload={stats.reload}
@@ -201,7 +186,7 @@ export function StatisticsTab({ id }: { id: number }) {
         {stats.data === undefined || stats.data === null ? (
           <EmptyBox title="Sense estadístiques" />
         ) : (
-          <DataView data={groupStudyCenters(stats.data)} />
+          <DataView data={groupEventStatistics(stats.data)} />
         )}
       </Section>
       <Section
