@@ -261,6 +261,14 @@ export function EventOperations({
             );
           }}
         >
+          <div className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md" aria-label="Desar configuració">
+            <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
+              {busy ? "Desant…" : error || (JSON.stringify(draft) !== JSON.stringify(data) ? "Canvis pendents de desar" : notice || "Configuració desada")}
+            </p>
+            <Button type="submit" disabled={busy} className="shrink-0">
+              {busy ? "Desant…" : "Desar configuració"}
+            </Button>
+          </div>
           {(tab === "live" || tab === "rooms") && (
             <Card>
               <CardHeader>
@@ -617,7 +625,6 @@ export function EventOperations({
                 </CardContent>
               </Card>
             ))}
-          <Button disabled={busy}>Desar configuració</Button>
         </form>
       )}
       {tab === "meals" && (
