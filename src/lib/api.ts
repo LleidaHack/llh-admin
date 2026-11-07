@@ -13,7 +13,27 @@ export type EventRecord = {
   max_group_size: number;
   max_sponsors: number;
 };
-export type Profile = { id: number; name: string; email: string; type: string };
+export type Profile = {
+  id: number;
+  name: string;
+  email: string;
+  type: string;
+  // Missing on backends released before access roles existed.
+  access_role?: AccessRole;
+};
+export type AccessRole =
+  "superadmin" | "admin" | "lleidahacker" | "hacker" | "mentor";
+type RoleSource = { access_role?: string | null; type?: string };
+// Older backends do not send access_role; their organizers (legacy
+// "lleida_hacker" type) had full access, so treat them as "legacy".
+export const panelRole = (p: RoleSource | null | undefined) =>
+  p?.access_role || (p?.type === "lleida_hacker" ? "legacy" : undefined);
+export const canEnterPanel = (p: RoleSource | null | undefined) =>
+  ["superadmin", "admin", "legacy"].includes(panelRole(p) ?? "");
+// Critical actions (ban, force-verify, deleting records, ...) are reserved to
+// superadmins by the backend; admins would only get a 403.
+export const canRunCritical = (p: RoleSource | null | undefined) =>
+  ["superadmin", "legacy"].includes(panelRole(p) ?? "");
 export type Company = {
   id: number;
   name: string;
@@ -237,8 +257,10 @@ export async function login(email: string, password: string) {
   saveToken(tokens.access_token);
   try {
     const user = await request<Profile>("/v1/auth/me");
-    if (user.type !== "lleida_hacker")
-      throw new Error("Aquest panell requereix un compte d'organitzador.");
+    if (!canEnterPanel(user))
+      throw new Error(
+        "Aquest panell requereix un organitzador amb rol admin o superadmin. El lleidahacker utilitza l’escàner de HackEPS.",
+      );
     return user;
   } catch (error) {
     clearSession();

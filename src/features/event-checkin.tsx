@@ -228,8 +228,8 @@ export function VouchersCard({ id }: { id: number }) {
 
   const release = (v: Voucher) =>
     setConfirmation({
-      title: `Alliberar ${v.code}`,
-      description: `El voucher deixarà d'estar assignat a ${v.hacker?.name ?? "aquest participant"}. La seva assistència es manté i se li podrà assignar un altre voucher al check-in.`,
+      title: `Invalidar ${v.code}`,
+      description: `El voucher quedarà invalidat permanentment i deixarà d'estar assignat a ${v.hacker?.name ?? "aquest participant"} (per exemple, si s'ha perdut). La seva assistència es manté i se li podrà assignar un altre voucher al check-in.`,
       run: async () => {
         await request(
           `/v1/event/${id}/vouchers/${encodeURIComponent(v.code)}/assign`,
@@ -349,7 +349,7 @@ export function VouchersCard({ id }: { id: number }) {
                           size="sm"
                           onClick={() => release(v)}
                         >
-                          Alliberar
+                          Invalidar
                         </Button>
                       )}
                     </TableCell>

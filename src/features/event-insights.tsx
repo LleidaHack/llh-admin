@@ -36,6 +36,7 @@ import {
   fetchCvUrl,
   type Meal,
   type Participant,
+  type Team,
   type HackerProfile,
 } from "@/lib/api";
 import { UserAccountProfile, type UserProfile } from "./user-profile";
@@ -464,6 +465,26 @@ export function ParticipantDetailDialog({
   onClose: () => void;
   onNotesChange?: () => void;
 }) {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [teamsError, setTeamsError] = useState("");
+  useEffect(() => {
+    let active = true;
+    setTeamsLoading(true);
+    setTeamsError("");
+    setTeams([]);
+    void request<{ groups: Team[] }>(`/v1/event/${eventId}/groups?include_images=false`)
+      .then(({ groups }) => {
+        if (active) setTeams(groups.filter((team) => team.members.some((member) =>
+          member.id != null
+            ? member.id === participant.id
+            : !!participant.nickname && member.nickname === participant.nickname,
+        )));
+      })
+      .catch((e) => { if (active) setTeamsError(errorMessage(e)); })
+      .finally(() => { if (active) setTeamsLoading(false); });
+    return () => { active = false; };
+  }, [eventId, participant.id, participant.nickname]);
   const [data, setData] = useState<HackerProfile>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -545,6 +566,26 @@ export function ParticipantDetailDialog({
         </DialogHeader>
         <ErrorBox error={error} />
         <div className="flex flex-col gap-5">
+          <Card>
+            <CardHeader><CardTitle>Equip d’aquest esdeveniment</CardTitle></CardHeader>
+            <CardContent>
+              {teamsLoading ? <p role="status">Carregant l’equip…</p>
+                : teamsError ? <ErrorBox error={teamsError} />
+                : teams.length ? teams.map((team) => (
+                  <div key={team.id} className="space-y-2">
+                    <p className="font-semibold">{team.name}</p>
+                    {team.description && <p className="text-sm text-muted-foreground">{team.description}</p>}
+                    <ul className="list-disc pl-5 text-sm">
+                      {team.members.map((member) => (
+                        <li key={member.id ?? member.nickname}>
+                          {member.name}{member.nickname ? ` · ${member.nickname}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )) : <p className="text-sm text-muted-foreground">Aquest participant encara no té equip en aquest esdeveniment.</p>}
+            </CardContent>
+          </Card>
           {cv.trim() ? (
             <Button variant="outline" asChild className="self-start">
               {isUrl(cv) ? (
@@ -644,9 +685,9 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Registrar un àpat per codi</CardTitle>
+        <CardTitle>Registrar un àpat amb acreditació</CardTitle>
         <CardDescription>
-          Marca que un participant ha recollit un àpat introduint el seu codi.
+          Introdueix el codi de l’acreditació física. Els tiquets d’entrada no són vàlids per als àpats.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -691,7 +732,7 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
           </Field>
           <Field className="w-auto">
             <FieldLabel htmlFor="meal-eat-code">
-              Codi del participant
+              Codi de l’acreditació
             </FieldLabel>
             <Input
               id="meal-eat-code"

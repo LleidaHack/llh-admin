@@ -6,7 +6,8 @@ vi.stubGlobal("sessionStorage", {
   removeItem: (k: string) => storage.delete(k),
 });
 vi.stubGlobal("window", { dispatchEvent: vi.fn() });
-const { request, login, hasSession, clearSession } = await import("./api");
+const { request, login, hasSession, clearSession, canRunCritical } =
+  await import("./api");
 beforeEach(() => {
   clearSession();
   vi.stubGlobal("fetch", vi.fn());
@@ -19,7 +20,13 @@ describe("API session", () => {
         new Response(JSON.stringify({ access_token: "local-token" })),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 1, type: "lleida_hacker" })),
+        new Response(
+          JSON.stringify({
+            id: 1,
+            type: "lleida_hacker",
+            access_role: "admin",
+          }),
+        ),
       );
     await login("test@example.test", "password");
     expect(vi.mocked(fetch).mock.calls[0][1]?.headers).toMatchObject({
@@ -66,6 +73,71 @@ describe("API session", () => {
   });
 });
 
+describe("management access roles", () => {
+  it.each(["admin", "superadmin"])(
+    "accepts a participant assigned %s access",
+    async (role) => {
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: "token" })),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ type: "hacker", access_role: role })),
+        );
+      const profile = await login("staff@example.test", "password");
+      expect(profile.access_role).toBe(role);
+      expect(hasSession()).toBe(true);
+    },
+  );
+  it("rejects scanner staff even with a legacy organizer account", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token" })),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ type: "lleidahacker", access_role: "lleidahacker" }),
+        ),
+      );
+    await expect(login("staff@example.test", "password")).rejects.toThrow(
+      "organitzador",
+    );
+    expect(hasSession()).toBe(false);
+  });
+  it("accepts organizers from a backend that does not send access roles yet", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token" })),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ type: "lleida_hacker" })),
+      );
+    await login("organizer@example.test", "password");
+    expect(hasSession()).toBe(true);
+  });
+  it("rejects participants from a backend without access roles", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token" })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ type: "hacker" })));
+    await expect(login("hacker@example.test", "password")).rejects.toThrow(
+      "organitzador",
+    );
+  });
+});
+
+describe("critical action visibility", () => {
+  it.each([
+    [{ access_role: "superadmin" }, true],
+    [{ access_role: "admin" }, false],
+    [{ type: "lleida_hacker" }, true],
+    [{ type: "hacker" }, false],
+  ])("%o -> %s", (profile, expected) => {
+    expect(canRunCritical(profile)).toBe(expected);
+  });
+});
+
 describe("legacy permission errors", () => {
   async function organizerLogin() {
     vi.mocked(fetch)
@@ -73,7 +145,13 @@ describe("legacy permission errors", () => {
         new Response(JSON.stringify({ access_token: "valid-token" })),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 1, type: "lleida_hacker" })),
+        new Response(
+          JSON.stringify({
+            id: 1,
+            type: "lleida_hacker",
+            access_role: "admin",
+          }),
+        ),
       );
     await login("organizer@example.test", "password");
   }
@@ -86,7 +164,13 @@ describe("legacy permission errors", () => {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 1, type: "lleida_hacker" })),
+        new Response(
+          JSON.stringify({
+            id: 1,
+            type: "lleida_hacker",
+            access_role: "admin",
+          }),
+        ),
       );
     await expect(
       request("/v1/event/1/count_unregistered_hackers/"),

@@ -30,6 +30,45 @@ export const accountType = (type: string) =>
     service: "Servei",
   })[type] || "Compte";
 const messages: Record<string, string> = {
+  "superadmin permission required":
+    "Aquesta acció està reservada al superadmin.",
+  "management access requires admin or superadmin":
+    "Gestió està reservat als rols admin i superadmin.",
+  "nice try, farmer. this tractor does not mint lleidacoins.":
+    "Bon intent, pagès: aquest tractor no fabrica LleidaCoins. 🚜",
+  "already registered in this round":
+    "Ja has recollit aquest àpat o participat en aquesta activitat en aquesta ronda.",
+  "meal already collected in this round":
+    "Ja has recollit aquest àpat en aquesta ronda.",
+  "meal round is closed": "Aquesta ronda està tancada.",
+  "meal round changed; refresh before scanning again":
+    "La ronda ha canviat. Actualitza abans de tornar a escanejar.",
+  "insufficient lleidacoins": "No tens prou LleidaCoins per a aquest premi.",
+  "prize out of stock": "Aquest premi està esgotat.",
+  "participant must check in first":
+    "Cal registrar primer l’entrada del participant.",
+  "organizer permission required": "Necessites permisos d’organització.",
+  "participant code not found":
+    "No s’ha trobat cap participant amb aquest codi.",
+  "badge is unassigned or belongs to another event":
+    "L’acreditació no està assignada o pertany a un altre esdeveniment.",
+  "configuration changed; refresh before saving":
+    "La configuració ha canviat. Actualitza abans de desar.",
+  "not enough time; extend judging hours or reduce slot length":
+    "No hi caben totes les presentacions. Amplia l’horari o redueix-ne la durada.",
+  "presentation changed; refresh first":
+    "El torn ha canviat. Actualitza abans d’editar-lo.",
+  "schedule conflict; adjust time or explicitly override":
+    "Hi ha un solapament. Canvia l’hora o autoritza una excepció.",
+  "room or team already has an active presentation":
+    "La sala o l’equip ja té una presentació activa.",
+  "web push is not configured":
+    "Les notificacions push encara no estan configurades.",
+  "movement already reversed": "Aquest moviment ja s’ha corregit.",
+  "operation identifier already used for a different request":
+    "Aquest identificador ja correspon a una altra operació.",
+  "active meal delivery not found":
+    "No s’ha trobat l’entrega o ja està corregida.",
   "incorrect password": "La contrasenya és incorrecta.",
   "account is not available":
     "Aquest compte no està disponible. Ha d'estar actiu i verificat.",

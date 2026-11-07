@@ -1,3 +1,5 @@
+import { NicknameCorrection } from "./nickname-moderation";
+import { UserAccessRole } from "./user-access-role";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ import { ErrorBox, Loading } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 
 export type UserProfile = HackerProfile & {
+  access_role?: string;
   id?: number;
   name: string;
   nickname: string;
@@ -109,6 +112,14 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
   return (
     <div className="flex flex-col gap-5">
       <ErrorBox error={error} />
+      {user.id != null && <NicknameCorrection userId={user.id} onSaved={nickname => setProfile(current => ({ ...current, nickname }))} />}
+      {user.id != null && (
+        <UserAccessRole
+          key={user.id}
+          userId={user.id}
+          initialRole={profile.access_role}
+        />
+      )}
       {loading && <Loading />}
       <dl className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
         {fields.map(({ key, label, link }) => {

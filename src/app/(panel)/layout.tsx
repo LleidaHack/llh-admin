@@ -14,7 +14,14 @@ import { catalanValidation, clearValidation } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/shared";
-import { clearSession, hasSession, request, type Profile } from "@/lib/api";
+import {
+  canEnterPanel,
+  clearSession,
+  hasSession,
+  request,
+  type Profile,
+} from "@/lib/api";
+import { ViewerContext } from "@/lib/viewer";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -56,8 +63,7 @@ export default function PanelLayout({
     request<Profile>("/v1/auth/me")
       .then((p) => {
         if (!active) return;
-        if (p.type !== "lleida_hacker")
-          throw new Error("Cal un compte d'organitzador.");
+        if (!canEnterPanel(p)) throw new Error("Cal un compte d'organitzador.");
         setProfile(p);
         setChecking(false);
       })
@@ -152,7 +158,11 @@ export default function PanelLayout({
             </Button>
           </div>
         </header>
-        <main className="main-content">{children}</main>
+        <main className="main-content">
+          <ViewerContext.Provider value={profile}>
+            {children}
+          </ViewerContext.Provider>
+        </main>
       </div>
     </div>
   );

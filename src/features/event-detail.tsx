@@ -1,3 +1,7 @@
+"use client";
+import { EventOperations, type OperationSection } from "./event-operations";
+import { useCanRunCritical } from "@/lib/viewer";
+import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
@@ -76,6 +80,65 @@ import {
 } from "@/lib/api";
 import { dateLabel, serverDate } from "@/lib/events";
 import { cn } from "@/lib/utils";
+const eventMenu = [
+  {
+    label: "Participants",
+    items: [
+      ["participants", "Inscripcions"],
+      ["teams", "Equips"],
+      ["checkin", "Assistència"],
+    ],
+  },
+  {
+    label: "Jornada",
+    items: [
+      ["activities", "Agenda i activitats"],
+      ["meals", "Àpats i rondes"],
+      ["coins", "LleidaCoins"],
+      ["prizes", "Premis"],
+      ["logistics", "Logística"],
+    ],
+  },
+  {
+    label: "Projectes i jurat",
+    items: [
+      ["challenges", "Reptes"],
+      ["devpost", "Devpost"],
+      ["rooms", "Sales i horaris"],
+      ["judging", "Torns de presentació"],
+    ],
+  },
+  {
+    label: "Comunicació",
+    items: [
+      ["live", "Pàgina Live"],
+      ["alerts", "Avisos"],
+      ["comms", "Correu als participants"],
+    ],
+  },
+  {
+    label: "Administració",
+    items: [
+      ["settings", "Informació"],
+      ["sponsors", "Patrocinadors"],
+      ["statistics", "Estadístiques"],
+      ["audit", "Historial d’inscripcions"],
+      ["operation-audit", "Traçabilitat"],
+    ],
+  },
+];
+const standaloneOperations: { value: string; section: OperationSection }[] = [
+  { value: "live", section: "live" },
+  { value: "activities", section: "activities" },
+  { value: "challenges", section: "challenges" },
+  { value: "devpost", section: "devpost" },
+  { value: "rooms", section: "rooms" },
+  { value: "judging", section: "judging" },
+  { value: "coins", section: "coins" },
+  { value: "prizes", section: "prizes" },
+  { value: "alerts", section: "alerts" },
+  { value: "operation-audit", section: "audit" },
+];
 // Sponsor tiers shared with the HackEPS frontend: 0 = highest.
 const TIERS = [
   { value: 0, label: "Supreme" },
@@ -152,6 +215,8 @@ export function EventDetail({
   onBack: () => void;
   reloadEvents: () => Promise<void>;
 }) {
+  // Deleting/unlinking records is superadmin-only on the backend.
+  const critical = useCanRunCritical();
   const [event, setEvent] = useState<EventRecord>(),
     [participants, setParticipants] = useState<Participant[]>([]),
     [teams, setTeams] = useState<Team[]>([]),
@@ -176,6 +241,21 @@ export function EventDetail({
       null,
     ),
     [code, setCode] = useState("");
+  const [activeSection, setActiveSection] = useState("participants");
+  const [lastSections, setLastSections] = useState<Record<string, string>>({});
+  const activeGroup = eventMenu.find((group) =>
+    group.items.some(([value]) => value === activeSection),
+  )!;
+  const selectSection = (value: string) => {
+    if (value !== activeSection && !confirmDiscardUnsaved()) return;
+    setUnsavedChanges(false);
+    setActiveSection(value);
+    const group = eventMenu.find((group) =>
+      group.items.some(([key]) => key === value),
+    );
+    if (group)
+      setLastSections((previous) => ({ ...previous, [group.label]: value }));
+  };
   const [confirmation, setConfirmation] = useState<{
     title: string;
     description: string;
@@ -486,22 +566,44 @@ export function EventDetail({
         )}
       </div>
       <ErrorBox error={error} />
-      <Tabs defaultValue="participants">
-        <TabsList className="h-auto max-w-full flex-wrap">
-          <TabsTrigger value="participants">
-            Inscripcions ({participants.length})
-          </TabsTrigger>
-          <TabsTrigger value="teams">Equips ({teams.length})</TabsTrigger>
-          <TabsTrigger value="sponsors">
-            Patrocinadors ({sponsors.length})
-          </TabsTrigger>
-          <TabsTrigger value="meals">Àpats ({meals.length})</TabsTrigger>
-          <TabsTrigger value="checkin">Assistència</TabsTrigger>
-          <TabsTrigger value="comms">Comunicacions</TabsTrigger>
-          <TabsTrigger value="statistics">Estadístiques</TabsTrigger>
-          <TabsTrigger value="logistics">Logística</TabsTrigger>
-          <TabsTrigger value="audit">Historial</TabsTrigger>
-          <TabsTrigger value="settings">Informació</TabsTrigger>
+      <Tabs value={activeSection} onValueChange={selectSection}>
+        <nav
+          aria-label="Àrees de gestió de l’esdeveniment"
+          className="flex flex-wrap gap-2 border-b pb-4"
+        >
+          {eventMenu.map((group) => (
+            <Button
+              key={group.label}
+              variant={
+                activeGroup.label === group.label ? "default" : "outline"
+              }
+              aria-pressed={activeGroup.label === group.label}
+              onClick={() =>
+                selectSection(lastSections[group.label] || group.items[0][0])
+              }
+            >
+              {group.label}
+            </Button>
+          ))}
+        </nav>
+        <TabsList
+          aria-label={activeGroup.label}
+          className="mt-2 h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0"
+        >
+          {activeGroup.items.map(([value, label]) => (
+            <TabsTrigger
+              className="min-h-10 flex-none px-3"
+              key={value}
+              value={value}
+            >
+              {label}
+              {value === "participants"
+                ? ` (${participants.length})`
+                : value === "teams"
+                  ? ` (${teams.length})`
+                  : ""}
+            </TabsTrigger>
+          ))}
         </TabsList>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
@@ -1009,19 +1111,21 @@ export function EventDetail({
                       />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          confirm(
-                            `Desvincular ${c.name}`,
-                            `/v1/event/${id}/sponsors/${c.id}`,
-                            "DELETE",
-                          )
-                        }
-                      >
-                        Desvincular
-                      </Button>
+                      {critical && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            confirm(
+                              `Desvincular ${c.name}`,
+                              `/v1/event/${id}/sponsors/${c.id}`,
+                              "DELETE",
+                            )
+                          }
+                        >
+                          Desvincular
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1062,19 +1166,21 @@ export function EventDetail({
                         >
                           Editar
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            confirm(
-                              `Eliminar ${m.name}`,
-                              `/v1/meal/${m.id}`,
-                              "DELETE",
-                            )
-                          }
-                        >
-                          Eliminar
-                        </Button>
+                        {critical && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              confirm(
+                                `Eliminar ${m.name}`,
+                                `/v1/meal/${m.id}`,
+                                "DELETE",
+                              )
+                            }
+                          >
+                            Eliminar
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1085,6 +1191,11 @@ export function EventDetail({
             <EmptyBox title="Planifica els àpats d'aquesta edició" />
           )}
           <MealCheckIn meals={meals} />
+          <EventOperations
+            key={meals.map((meal) => `${meal.id}-${meal.name}`).join(",")}
+            id={id}
+            section="meals"
+          />
         </TabsContent>
         <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
           <VouchersCard id={id} />
@@ -1142,6 +1253,11 @@ export function EventDetail({
         <TabsContent value="logistics" className="pt-4">
           <LogisticsTab id={id} />
         </TabsContent>
+        {standaloneOperations.map((item) => (
+          <TabsContent key={item.value} value={item.value} className="pt-4">
+            <EventOperations id={id} section={item.section} />
+          </TabsContent>
+        ))}
         <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
           <Card>
             <CardHeader>
@@ -1171,24 +1287,26 @@ export function EventDetail({
               </dl>
             </CardContent>
           </Card>
-          <Button
-            variant="destructive"
-            className="self-start"
-            onClick={() =>
-              setConfirmation({
-                title: `Eliminar ${event.name}`,
-                description:
-                  "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
-                run: async () => {
-                  await request(`/v1/event/${id}`, "DELETE");
-                  await reloadEvents();
-                  onBack();
-                },
-              })
-            }
-          >
-            Eliminar l'esdeveniment
-          </Button>
+          {critical && (
+            <Button
+              variant="destructive"
+              className="self-start"
+              onClick={() =>
+                setConfirmation({
+                  title: `Eliminar ${event.name}`,
+                  description:
+                    "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
+                  run: async () => {
+                    await request(`/v1/event/${id}`, "DELETE");
+                    await reloadEvents();
+                    onBack();
+                  },
+                })
+              }
+            >
+              Eliminar l'esdeveniment
+            </Button>
+          )}
         </TabsContent>
       </Tabs>
       {editing && (
@@ -1252,6 +1370,7 @@ export function EventDetail({
       )}
       {detail && (
         <ParticipantDetailDialog
+          key={`${id}:${detail.id}`}
           eventId={id}
           participant={detail}
           onClose={() => setDetail(null)}
