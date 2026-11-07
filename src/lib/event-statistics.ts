@@ -1,7 +1,9 @@
+import type { HackerProfile } from "./api";
 import { normalizeSearch } from "./search";
 import { studyCenter } from "./study-centers";
 
 export const statisticLabels: Record<string, string> = {
+  food_restrictions: "Intoleràncies i restriccions alimentàries",
   location: "Ubicació",
   studies: "Estudis",
   study_center: "Centre d'estudis",
@@ -33,18 +35,9 @@ export function groupEventStatistics(data: unknown): unknown {
         return [field, values];
       const groups = new Map<string, { label: string; count: number }>();
       for (const [value, count] of entries) {
-        const raw =
-          typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
-        const center = field === "study_center" ? studyCenter(raw) : undefined;
-        const missing = !raw || raw === "-" || raw === "null";
-        const label =
-          field === "study_center"
-            ? (center?.label ?? "Sense especificar")
-            : missing
-              ? "Sense especificar"
-              : raw;
+        const label = statisticValueLabel(field, value);
         const key = normalizeSearch(label);
-      const group = groups.get(key);
+        const group = groups.get(key);
         if (group) group.count += count;
         else groups.set(key, { label, count });
       }
@@ -61,4 +54,52 @@ export function groupEventStatistics(data: unknown): unknown {
       ];
     }),
   );
+}
+
+export function statisticValueLabel(field: string, value: unknown): string {
+  const raw =
+    typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+  if (field === "study_center")
+    return studyCenter(raw)?.label ?? "Sense especificar";
+  if (!raw || raw === "-" || raw === "null") return "Sense especificar";
+  if (
+    field === "food_restrictions" &&
+    ["no", "none", "cap", "ninguna", "ninguno", "sense restriccions"].includes(
+      normalizeSearch(raw),
+    )
+  )
+    return "Sense restriccions";
+  return raw;
+}
+
+export type StatisticsParticipant = HackerProfile & { id: number };
+export function participantStatistics(participants: StatisticsParticipant[]) {
+  const unique = [
+    ...new Map(participants.map((person) => [person.id, person])).values(),
+  ];
+  return Object.keys(statisticLabels).map((field) => {
+    const groups = new Map<
+      string,
+      { label: string; participants: StatisticsParticipant[] }
+    >();
+    for (const person of unique) {
+      const label = statisticValueLabel(
+        field,
+        person[field as keyof HackerProfile],
+      );
+      const key = normalizeSearch(label);
+      const group = groups.get(key) ?? { label, participants: [] };
+      group.participants.push(person);
+      groups.set(key, group);
+    }
+    return {
+      field,
+      label: statisticLabels[field],
+      groups: [...groups.values()].sort(
+        (a, b) =>
+          b.participants.length - a.participants.length ||
+          a.label.localeCompare(b.label, "ca"),
+      ),
+    };
+  });
 }
