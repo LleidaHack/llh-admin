@@ -275,17 +275,15 @@ export function EventDetail({
         ),
         request<Company[]>(`/v1/event/${id}/sponsors`),
         request<Meal[]>(`/v1/event/${id}/meals`),
-        request<Company[]>("/v1/company/all"),
       ]);
       setError("");
-      const [e, p, g, s, m, c] = results;
+      const [e, p, g, s, m] = results;
       if (e.status === "fulfilled") setEvent(e.value);
       if (p.status === "fulfilled") setParticipants(p.value.participants);
       setAuditVersion((v) => v + 1);
       if (g.status === "fulfilled") setTeams(g.value.groups);
       if (s.status === "fulfilled") setSponsors(s.value);
       if (m.status === "fulfilled") setMeals(m.value);
-      if (c.status === "fulfilled") setCompanies(c.value);
       const failed = results.filter((r) => r.status === "rejected");
       if (failed.length) throw (failed[0] as PromiseRejectedResult).reason;
     } catch (e) {
@@ -294,9 +292,21 @@ export function EventDetail({
       setLoading(false);
     }
   }, [id]);
+  // The company list carries every logo (~2 MB) and does not change when
+  // participants or meals do: load it once instead of after every action.
+  const loadCompanies = useCallback(async () => {
+    try {
+      setCompanies(await request<Company[]>("/v1/company/all"));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }, []);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    void loadCompanies();
+  }, [loadCompanies]);
   // After accepting/rejecting only the registrations change: skip reloading
   // sponsors, companies, meals and teams.
   const loadParticipants = useCallback(async () => {
@@ -534,7 +544,10 @@ export function EventDetail({
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            onClick={() => void load()}
+            onClick={() => {
+              void load();
+              void loadCompanies();
+            }}
             aria-label="Actualitzar l'esdeveniment"
           >
             <RefreshCw />
