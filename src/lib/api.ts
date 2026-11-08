@@ -236,7 +236,14 @@ export async function request<T>(
       (data as { detail?: unknown; message?: unknown })?.detail ??
       (data as { message?: unknown })?.message;
     const message = serverError(status === 403 ? undefined : detail, status);
-    throw new ApiError(status, message);
+    const reference = (data as { request_id?: unknown })?.request_id;
+    const suffix =
+      status >= 500 &&
+      typeof reference === "string" &&
+      /^[0-9a-f-]{36}$/i.test(reference)
+        ? ` Referència: ${reference}`
+        : "";
+    throw new ApiError(status, message + suffix);
   }
   if (data === null && raw)
     throw new ApiError(
@@ -263,7 +270,12 @@ export async function login(email: string, password: string) {
       );
     return user;
   } catch (error) {
-    clearSession();
+    if (
+      !(error instanceof ApiError) ||
+      error.status === 401 ||
+      error.status === 403
+    )
+      clearSession();
     throw error;
   }
 }
