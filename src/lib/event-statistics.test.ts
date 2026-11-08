@@ -64,3 +64,36 @@ describe("groupEventStatistics", () => {
     expect(groupEventStatistics(null)).toBe(null);
   });
 });
+
+import { participantStatistics } from "./event-statistics";
+import { dietaryWarning } from "./dietary";
+
+it("keeps dietary participants attached to each count and preserves original answers", () => {
+  const people = [
+    { id: 1, name: "First", food_restrictions: "Lactosa" },
+    { id: 2, name: "Second", food_restrictions: " lactosa " },
+    { id: 3, food_restrictions: null },
+    { id: 4, food_restrictions: "No" },
+    { id: 5, food_restrictions: "Gluten i lactosa" },
+  ];
+  const category = participantStatistics([...people, people[0]])[0];
+  expect(category.field).toBe("food_restrictions");
+  expect(category.groups[0].participants.map((p) => p.id)).toEqual([1, 2]);
+  expect(category.groups[0].participants[1].food_restrictions).toBe(
+    " lactosa ",
+  );
+  expect(category.groups.reduce((n, g) => n + g.participants.length, 0)).toBe(
+    5,
+  );
+  expect(category.groups.map((g) => g.label)).toContain("Sense especificar");
+  expect(category.groups.map((g) => g.label)).toContain("Sense restriccions");
+});
+
+it("only suppresses explicit negative dietary answers", () => {
+  for (const value of [null, "", "No", " cap ", "Ninguna."])
+    expect(dietaryWarning(value)).toBe("");
+  expect(dietaryWarning("No puc prendre lactosa")).toBe(
+    "No puc prendre lactosa",
+  );
+  expect(dietaryWarning("Gluten, fruits secs")).toBe("Gluten, fruits secs");
+});
