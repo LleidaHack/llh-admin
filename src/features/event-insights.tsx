@@ -172,7 +172,7 @@ function Section({
 }
 
 export function StatisticsTab({ id }: { id: number }) {
-  const stats = useResource<StatisticsParticipant[]>(`/v1/event/${id}/get_approved_hackers`);
+  const stats = useResource<StatisticsParticipant[]>(`/v1/event/${id}/statistics_participants`);
   const unregistered = useResource<unknown>(
     `/v1/event/${id}/count_unregistered_hackers/`,
   );
