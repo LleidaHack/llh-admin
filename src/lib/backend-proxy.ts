@@ -22,7 +22,7 @@ function isReadOnly(method: string, path: string) {
       /^\/v1\/auth\/me\/?$/,
       /^\/v1\/(user|hacker|company)\/(all|\d+)\/?$/,
       /^\/v1\/event\/(all|get_hackeps|\d+)\/?$/,
-      /^\/v1\/event\/\d+\/(statistics|hackers_participants_list|hackers_participants_grouped_list|groups|sponsors|get_sizes|food_restrictions|get_approved_hackers|get_approved_hackers_mails|count_unregistered_hackers|status)\/?$/,
+      /^\/v1\/event\/\d+\/(statistics|statistics_participants|hackers_participants_list|hackers_participants_grouped_list|groups|sponsors|get_sizes|food_restrictions|get_approved_hackers|get_approved_hackers_mails|count_unregistered_hackers|status)\/?$/,
       /^\/v1\/event\/\d+\/registration\/\d+\/?$/,
       /^\/v1\/operations\/\d+\/(public|config|audit|scanner|mentors)\/?$/,
     ].some((pattern) => pattern.test(path))
