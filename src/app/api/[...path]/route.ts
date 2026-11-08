@@ -1,3 +1,4 @@
+import { proxyBackend } from "@/lib/backend-proxy";
 import { type NextRequest } from "next/server";
 
 // Server-side proxy for the LleidaHack backend. Replaces a next.config rewrite
@@ -9,6 +10,7 @@ import { type NextRequest } from "next/server";
 const target = process.env.API_TARGET || "http://127.0.0.1:8000";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/^\/api/, "");
@@ -24,27 +26,11 @@ async function proxy(request: NextRequest) {
   const body =
     method === "GET" || method === "HEAD" ? undefined : await request.text();
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(url, {
-      method,
-      headers,
-      body: body && body.length ? body : undefined,
-      redirect: "manual",
-    });
-  } catch {
-    return new Response(JSON.stringify({ detail: "backend unreachable" }), {
-      status: 502,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  const responseHeaders = new Headers();
-  const upstreamType = upstream.headers.get("content-type");
-  if (upstreamType) responseHeaders.set("content-type", upstreamType);
-  return new Response(await upstream.arrayBuffer(), {
-    status: upstream.status,
-    headers: responseHeaders,
+  return proxyBackend(url, path, {
+    method,
+    headers,
+    body: body && body.length ? body : undefined,
+    redirect: "manual",
   });
 }
 

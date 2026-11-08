@@ -13,8 +13,10 @@ import {
 import { catalanValidation, clearValidation } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loading } from "@/components/shared";
+import { Loading, ErrorBox } from "@/components/shared";
 import {
+  ApiError,
+  errorMessage,
   canEnterPanel,
   clearSession,
   hasSession,
@@ -39,6 +41,8 @@ export default function PanelLayout({
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [checking, setChecking] = useState(true);
+  const [connectionError, setConnectionError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -60,15 +64,26 @@ export default function PanelLayout({
       router.replace("/login");
       return;
     }
+    setChecking(true);
+    setConnectionError("");
     request<Profile>("/v1/auth/me")
       .then((p) => {
         if (!active) return;
-        if (!canEnterPanel(p)) throw new Error("Cal un compte d'organitzador.");
+        if (!canEnterPanel(p))
+          throw new ApiError(403, "Cal un compte d'organitzador.");
         setProfile(p);
         setChecking(false);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
+        if (
+          !(error instanceof ApiError) ||
+          ![401, 403].includes(error.status)
+        ) {
+          setConnectionError(errorMessage(error));
+          setChecking(false);
+          return;
+        }
         clearSession();
         router.replace("/login?reason=expired");
       });
@@ -81,7 +96,21 @@ export default function PanelLayout({
       active = false;
       window.removeEventListener("session-expired", expire);
     };
-  }, [router]);
+  }, [router, retry]);
+
+  if (connectionError)
+    return (
+      <div className="mx-auto max-w-lg space-y-4 p-12">
+        <ErrorBox error={connectionError} />
+        <p>
+          No s’ha pogut comprovar la sessió. Pots tornar-ho a provar sense
+          introduir les credencials de nou.
+        </p>
+        <Button onClick={() => setRetry((value) => value + 1)}>
+          Tornar-ho a provar
+        </Button>
+      </div>
+    );
 
   if (checking || !profile)
     return (

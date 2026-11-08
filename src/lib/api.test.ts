@@ -240,3 +240,22 @@ describe("organizer participant profiles", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+it("keeps a newly issued session when the identity check has a gateway failure", async () => {
+  vi.mocked(fetch)
+    .mockResolvedValueOnce(Response.json({ access_token: "local-token" }))
+    .mockResolvedValueOnce(
+      Response.json(
+        {
+          detail: "backend unreachable",
+          request_id: "12345678-1234-1234-1234-123456789abc",
+        },
+        { status: 502 },
+      ),
+    );
+  await expect(login("test@example.test", "password")).rejects.toThrow(
+    "Referència: 12345678-1234-1234-1234-123456789abc",
+  );
+  expect(hasSession()).toBe(true);
+  expect(window.dispatchEvent).not.toHaveBeenCalled();
+});
