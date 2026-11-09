@@ -226,6 +226,26 @@ export function VouchersCard({ id }: { id: number }) {
     }
   };
 
+  const resetVoucher = (v: Voucher) => {
+    const operationId = crypto.randomUUID();
+    setConfirmation({
+      title: `Reiniciar ${v.code}`,
+      description: `Es desvincularà ${v.hacker?.name ?? "el participant"}, s'anul·laran el check-in, els àpats i les activitats d'aquest esdeveniment, es deixaran a zero les LleidaCoins i es retornaran els premis a l'estoc. Recupera els premis físics abans de confirmar. El voucher quedarà lliure. La inscripció i l'historial d'auditoria es conserven.`,
+      run: async () => {
+        await request(
+          `/v1/event/${id}/vouchers/${encodeURIComponent(v.code)}/reset`,
+          "POST",
+          {
+            operation_id: operationId,
+            expected_hacker_id: v.hacker_id,
+            reason: "Organizer confirmed full voucher reset",
+          },
+        );
+        await load();
+      },
+    });
+  };
+
   const release = (v: Voucher) =>
     setConfirmation({
       title: `Invalidar ${v.code}`,
@@ -343,6 +363,15 @@ export function VouchersCard({ id }: { id: number }) {
                         : "—"}
                     </TableCell>
                     <TableCell>
+                      {v.hacker && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => resetVoucher(v)}
+                        >
+                          Reiniciar
+                        </Button>
+                      )}
                       {v.hacker && (
                         <Button
                           variant="outline"

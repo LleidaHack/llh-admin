@@ -302,9 +302,11 @@ export function EventOperations({
                     ? "Canvis pendents de desar"
                     : notice || "Configuració desada")}
             </p>
-            <Button type="submit" disabled={busy} className="shrink-0">
-              {busy ? "Desant…" : "Desar configuració"}
-            </Button>
+            {dirty && (
+              <Button type="submit" disabled={busy} className="shrink-0">
+                {busy ? "Desant…" : "Desar configuració"}
+              </Button>
+            )}
           </div>
           {(tab === "live" || tab === "rooms") && (
             <Card>
