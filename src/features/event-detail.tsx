@@ -645,7 +645,7 @@ export function EventDetail({
                   "Persones",
                   "Jornada",
                   "Projectes",
-                  "Comunicació",
+                  "Comunic.",
                   "Més",
                 ][index]
               }
