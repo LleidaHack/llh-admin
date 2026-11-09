@@ -23,14 +23,18 @@ import {
 
 export function StatisticsGroups({
   participants,
+  onlyDietary = false,
 }: {
   participants: StatisticsParticipant[];
+  onlyDietary?: boolean;
 }) {
   const [selected, setSelected] = useState<{
     field: string;
     label: string;
   } | null>(null);
-  const categories = participantStatistics(participants);
+  const categories = participantStatistics(participants).filter(
+    (category) => !onlyDietary || category.field === "food_restrictions",
+  );
   const category = categories.find((item) => item.field === selected?.field);
   const group = category?.groups.find((item) => item.label === selected?.label);
   return (
@@ -40,6 +44,11 @@ export function StatisticsGroups({
           <Card key={category.field}>
             <CardHeader>
               <CardTitle>{category.label}</CardTitle>
+              {category.field === "food_restrictions" && (
+                <p className="text-sm text-muted-foreground">
+                  Només acceptats amb assistència confirmada.
+                </p>
+              )}
             </CardHeader>
             <CardContent>
               {category.groups.length ? (
