@@ -1,4 +1,5 @@
 "use client";
+import { createSequentialMailBatch } from "@/lib/mail-batch";
 import { EventOperations, type OperationSection } from "./event-operations";
 import { useCanRunCritical } from "@/lib/viewer";
 import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
@@ -461,19 +462,37 @@ export function EventDetail({
     (p) => p.status === "accepted" && p.confirmed_assistance,
   ).length;
   function resendUnconfirmed() {
+    const targets = [...unconfirmed];
+    const batch = createSequentialMailBatch(targets, async (participant) => {
+      await request(
+        `/v1/event/${id}/resend-accepted-mail/${participant.id}/`,
+        "GET",
+      );
+    });
     setConfirmation({
-      title: `Reenviar el correu a ${unconfirmed.length} ${unconfirmed.length === 1 ? "participant" : "participants"}`,
+      title: `Reenviar el correu a ${targets.length} participants`,
       description:
-        "Rebran de nou el correu d'acceptació, amb un enllaç nou per confirmar l'assistència, els acceptats que encara no han confirmat.",
+        "S'enviaran un a un als acceptats sense confirmar. Mantén aquesta finestra oberta fins que acabi. Si un enviament falla, el procés s'aturarà per evitar duplicats.",
       run: async () => {
-        const result = await request<{ sent?: number }>(
-          `/v1/event/${id}/resend-accepted-mails?only_unconfirmed=true`,
-        );
-        toast.success(`Correus enviats: ${result.sent ?? unconfirmed.length}`);
-        await loadParticipants();
+        setBusy(true);
+        try {
+          await batch((sent, total) => {
+            setConfirmation(
+              (current) =>
+                current && {
+                  ...current,
+                  description: `Correus processats: ${sent} de ${total}. Mantén aquesta finestra oberta.`,
+                },
+            );
+          });
+          toast.success(`Correus processats: ${targets.length}`);
+        } finally {
+          setBusy(false);
+        }
       },
     });
   }
+
   function exportCsv() {
     const rows = filtered.map((p) => [
       p.id,
