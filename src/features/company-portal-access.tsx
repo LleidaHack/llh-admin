@@ -18,6 +18,8 @@ type Access = {
   setup_complete: boolean;
   delivery_state: string | null;
   winner_id: number | null;
+  finalized_at: string | null;
+  version: number;
 };
 const deliveryLabels: Record<string, string> = {
   pending: "En cua",
@@ -175,6 +177,37 @@ export function CompanyPortalAccess({
             <p>Sales: {row.rooms.join(", ")}</p>
             {row.winner_id && (
               <p>Equip proposat com a guanyador: {row.winner_id}</p>
+            )}
+            {row.finalized_at && (
+              <div>
+                <p>
+                  Valoració tancada:{" "}
+                  {new Date(row.finalized_at).toLocaleString("ca")}
+                </p>
+                <Button
+                  disabled={busy}
+                  variant="outline"
+                  onClick={async () => {
+                    const reason = prompt("Motiu per reobrir la valoració:");
+                    if (!reason || reason.trim().length < 3) return;
+                    setBusy(true);
+                    try {
+                      await request(
+                        `/v1/company-portal/manage/${id}/${row.company_id}/reopen`,
+                        "POST",
+                        { version: row.version, reason },
+                      );
+                      await load();
+                    } catch (e) {
+                      setError(errorMessage(e));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Reobrir valoració
+                </Button>
+              </div>
             )}
             <Button
               variant="destructive"

@@ -24,7 +24,7 @@ function isReadOnly(method: string, path: string) {
       /^\/v1\/event\/(all|get_hackeps|\d+)\/?$/,
       /^\/v1\/event\/\d+\/(statistics|statistics_participants|hackers_participants_list|hackers_participants_grouped_list|groups|sponsors|get_sizes|food_restrictions|get_approved_hackers|get_approved_hackers_mails|count_unregistered_hackers|status)\/?$/,
       /^\/v1\/event\/\d+\/registration\/\d+\/?$/,
-      /^\/v1\/operations\/\d+\/(public|config|audit|scanner|mentors)\/?$/,
+      /^\/v1\/operations\/\d+\/(public|config|audit|scanner|mentors|status|manage)\/?$/,
     ].some((pattern) => pattern.test(path))
   );
 }
@@ -51,8 +51,23 @@ export async function proxyBackend(
   for (let attempt = 1; attempt <= 2; attempt++) {
     let response: Response | undefined;
     try {
-      response = await fetch(url, { ...init, cache: "no-store", signal });
+      const upstreamHeaders = new Headers(init.headers);
+      upstreamHeaders.set("x-request-id", requestId);
+      response = await fetch(url, {
+        ...init,
+        headers: upstreamHeaders,
+        cache: "no-store",
+        signal,
+      });
       const body = await response.arrayBuffer();
+      if (response.status >= 500 || Date.now() - started >= 1000) {
+        console.warn("Backend proxy response", {
+          requestId,
+          method,
+          status: response.status,
+          elapsedMs: Date.now() - started,
+        });
+      }
       const headers = new Headers({
         "x-request-id": requestId,
         "cache-control": "no-store",
