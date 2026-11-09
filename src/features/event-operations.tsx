@@ -291,7 +291,7 @@ export function EventOperations({
           }}
         >
           <div
-            className="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
+            className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
             aria-label="Desar configuració"
           >
             <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>

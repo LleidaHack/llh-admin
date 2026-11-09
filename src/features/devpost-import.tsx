@@ -38,6 +38,9 @@ type Preview = {
 const fields: Record<string, string> = {
   url: "URL del projecte",
   title: "Nom del projecte",
+  description: "Descripció (opcional)",
+  repository_url: "Repositori (opcional)",
+  demo_url: "Demo / vídeo (opcional)",
   team: "Codi d’equip HackEPS",
   challenge: "Repte",
   mlh: "MLH (opcional)",

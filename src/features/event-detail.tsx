@@ -1,4 +1,6 @@
 "use client";
+import { EventMentors } from "./event-mentors";
+import { CompanyPortalAccess } from "./company-portal-access";
 import { createSequentialMailBatch } from "@/lib/mail-batch";
 import { EventOperations, type OperationSection } from "./event-operations";
 import { useCanRunCritical } from "@/lib/viewer";
@@ -88,6 +90,7 @@ const eventMenu = [
       ["participants", "Inscripcions"],
       ["teams", "Equips"],
       ["checkin", "Assistència"],
+      ["mentors", "Mentors"],
     ],
   },
   {
@@ -107,6 +110,7 @@ const eventMenu = [
       ["devpost", "Devpost"],
       ["rooms", "Sales i horaris"],
       ["judging", "Torns de presentació"],
+      ["company-portal", "Portal d’empreses"],
     ],
   },
   {
@@ -598,10 +602,52 @@ export function EventDetail({
         )}
       </div>
       <ErrorBox error={error} />
-      <Tabs value={activeSection} onValueChange={selectSection}>
+      <Tabs
+        value={activeSection}
+        onValueChange={selectSection}
+        className="pb-24 md:pb-0"
+      >
+        <div className="sticky top-0 z-20 bg-background py-3 md:hidden">
+          <label className="text-sm font-medium">
+            {activeGroup.label}
+            <NativeSelect
+              aria-label="Secció de gestió"
+              value={activeSection}
+              onChange={(e) => selectSection(e.target.value)}
+            >
+              {activeGroup.items.map(([key, label]) => (
+                <NativeSelectOption key={key} value={key}>
+                  {label}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </label>
+        </div>
+        <nav
+          aria-label="Navegació mòbil de l’esdeveniment"
+          className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background p-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
+        >
+          {eventMenu.map((group, index) => (
+            <Button
+              className="min-h-12 min-w-0 flex-1 px-1 text-[11px]"
+              key={group.label}
+              variant={activeGroup.label === group.label ? "default" : "ghost"}
+              aria-pressed={activeGroup.label === group.label}
+              onClick={() =>
+                selectSection(lastSections[group.label] || group.items[0][0])
+              }
+            >
+              {
+                ["Persones", "Jornada", "Projectes", "Comunicació", "Més"][
+                  index
+                ]
+              }
+            </Button>
+          ))}
+        </nav>
         <nav
           aria-label="Àrees de gestió de l’esdeveniment"
-          className="flex flex-wrap gap-2 border-b pb-4"
+          className="hidden flex-wrap gap-2 border-b pb-4 md:flex"
         >
           {eventMenu.map((group) => (
             <Button
@@ -620,7 +666,7 @@ export function EventDetail({
         </nav>
         <TabsList
           aria-label={activeGroup.label}
-          className="mt-2 h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0"
+          className="mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex"
         >
           {activeGroup.items.map(([value, label]) => (
             <TabsTrigger
@@ -637,6 +683,12 @@ export function EventDetail({
             </TabsTrigger>
           ))}
         </TabsList>
+        <TabsContent value="mentors" className="pt-4">
+          <EventMentors base={`/v1/operations/${id}`} />
+        </TabsContent>
+        <TabsContent value="company-portal" className="pt-4">
+          <CompanyPortalAccess id={id} companies={companies} />
+        </TabsContent>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
             <div>
