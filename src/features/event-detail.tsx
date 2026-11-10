@@ -11,6 +11,7 @@ import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Pencil,
@@ -263,6 +264,10 @@ export function EventDetail({
     ),
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTopbarSlot(document.getElementById("topbar-slot"));
+  }, []);
   const [lastSections, setLastSections] = useState<Record<string, string>>({});
   const activeGroup =
     eventMenu.find((group) =>
@@ -576,23 +581,31 @@ export function EventDetail({
     );
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" />
-          Esdeveniments
-        </button>
-        <span className="text-muted-foreground">/</span>
-        <span className="truncate font-semibold">{event.name}</span>
-        <span className="text-muted-foreground">
-          · {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"} ·{" "}
-          {participants.length}/{event.max_participants} inscrits
-          {confirmedCount > 0 && ` · ${confirmedCount} confirmats`}
-        </span>
-      </div>
+      {topbarSlot &&
+        createPortal(
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Tornar als esdeveniments"
+              className="inline-flex shrink-0 items-center text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+            <span className="truncate font-semibold">{event.name}</span>
+            <Badge
+              variant={event.is_open ? "default" : "secondary"}
+              className="hidden shrink-0 sm:inline-flex"
+            >
+              {event.is_open ? "Oberta" : "Tancada"}
+            </Badge>
+            <span className="hidden shrink-0 text-muted-foreground lg:inline">
+              {participants.length}/{event.max_participants} inscrits
+              {confirmedCount > 0 && ` · ${confirmedCount} confirmats`}
+            </span>
+          </div>,
+          topbarSlot,
+        )}
       <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-2 border-b bg-background px-4 pb-2 pt-1 sm:mx-0 sm:px-0">
         <nav
           aria-label="Àrees de l’esdeveniment"

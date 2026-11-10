@@ -154,7 +154,7 @@ export default function PanelLayout({
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -166,6 +166,7 @@ export default function PanelLayout({
             >
               {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
             </Button>
+            <div id="topbar-slot" className="flex min-w-0 items-center" />
             <Badge variant="outline">{envLabel}</Badge>
           </div>
           <div className="flex items-center gap-3">
