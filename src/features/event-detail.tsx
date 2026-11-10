@@ -240,6 +240,7 @@ export function EventDetail({
     [sort, setSort] = useState<ParticipantSort>("oldest"),
     [statusFilter, setStatusFilter] = useState(""),
     [centerFilter, setCenterFilter] = useState(""),
+    [minorsOnly, setMinorsOnly] = useState(false),
     [selected, setSelected] = useState<Set<number>>(new Set()),
     [auditVersion, setAuditVersion] = useState(0),
     [companyId, setCompanyId] = useState(""),
@@ -418,6 +419,7 @@ export function EventDetail({
         searchItems(index, query).filter(
           (p) =>
             matchesStatus(p, statusFilter) &&
+            (!minorsOnly || p.is_minor === true) &&
             (!centerFilter ||
               (centerFilter === NO_CENTER
                 ? !studyCenter(p.study_center)
@@ -425,7 +427,7 @@ export function EventDetail({
         ),
         sort,
       ),
-    [index, query, sort, statusFilter, centerFilter],
+    [index, query, sort, statusFilter, centerFilter, minorsOnly],
   );
   const selectedParticipants = participants.filter((p) => selected.has(p.id));
   function bulk(kind: "accept" | "reject") {
@@ -512,6 +514,8 @@ export function EventDetail({
       p.registered_at,
       hasCv(p) ? "Sí" : "No",
       p.notes_count ?? 0,
+      p.age_at_event ?? "",
+      p.is_minor == null ? "Desconegut" : p.is_minor ? "Sí" : "No",
     ]);
     downloadCsv(
       `inscripcions-${event?.name ?? id}.csv`.replace(/[^\w.-]+/g, "_"),
@@ -527,6 +531,8 @@ export function EventDetail({
           "Data d'inscripció",
           "CV",
           "Notes",
+          "Edat a l’inici de l’esdeveniment",
+          "Menor",
         ],
         ...rows,
       ]),
@@ -673,6 +679,18 @@ export function EventDetail({
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={minorsOnly}
+                  onChange={(e) => {
+                    setMinorsOnly(e.target.checked);
+                    setPage(0);
+                  }}
+                />
+                Només menors (
+                {participants.filter((p) => p.is_minor === true).length})
+              </label>
               <NativeSelect
                 aria-label="Filtrar per estat"
                 value={statusFilter}
@@ -818,6 +836,14 @@ export function EventDetail({
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5">
                         {p.name}
+                        {p.is_minor === true && (
+                          <Badge
+                            variant="outline"
+                            title={`${p.age_at_event} anys a l’inici de l’esdeveniment`}
+                          >
+                            Menor
+                          </Badge>
+                        )}
                         {!!p.notes_count && (
                           <span
                             className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
