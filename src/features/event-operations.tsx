@@ -733,7 +733,9 @@ export function EventOperations({
                 <CardHeader>
                   <CardTitle>
                     {meal.name} · Ronda {r.round} ·{" "}
-                    {r.open ? "Oberta" : "Tancada"}
+                    {r.open
+                      ? "Habilitat a l’escàner"
+                      : "Deshabilitat a l’escàner"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -748,7 +750,7 @@ export function EventOperations({
                       ["next", "Obrir ronda següent"],
                       [
                         r.open ? "close" : "open",
-                        r.open ? "Tancar ronda" : "Reobrir ronda",
+                        r.open ? "Deshabilitar àpat" : "Habilitar àpat",
                       ],
                     ].map(([action, label]) => (
                       <Button

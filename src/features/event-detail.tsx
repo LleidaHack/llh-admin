@@ -790,6 +790,7 @@ export function EventDetail({
                   </TableHead>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
+                  <TableHead>LleidaCoins</TableHead>
                   <TableHead>Inscripció</TableHead>
                   <TableHead>Universitat</TableHead>
                   <TableHead>Estat</TableHead>
@@ -829,6 +830,7 @@ export function EventDetail({
                       </span>
                     </TableCell>
                     <TableCell>{p.email}</TableCell>
+                    <TableCell>{p.lleidacoins ?? "—"}</TableCell>
                     <TableCell>
                       {p.registered_at
                         ? dateLabel(serverDate(p.registered_at).toISOString())
