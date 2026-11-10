@@ -72,7 +72,10 @@ export function statisticValueLabel(field: string, value: unknown): string {
   return raw;
 }
 
-export type StatisticsParticipant = HackerProfile & { id: number };
+export type StatisticsParticipant = HackerProfile & {
+  id: number;
+  confirmed_assistance?: boolean;
+};
 export function participantStatistics(participants: StatisticsParticipant[]) {
   const unique = [
     ...new Map(participants.map((person) => [person.id, person])).values(),
@@ -83,6 +86,8 @@ export function participantStatistics(participants: StatisticsParticipant[]) {
       { label: string; participants: StatisticsParticipant[] }
     >();
     for (const person of unique) {
+      if (field === "food_restrictions" && person.confirmed_assistance !== true)
+        continue;
       const label = statisticValueLabel(
         field,
         person[field as keyof HackerProfile],
