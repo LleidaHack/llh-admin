@@ -90,12 +90,12 @@ export function CompanyPortalAccess({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Portal d’empreses · Invitacions i permisos</CardTitle>
+        <CardTitle>Invitacions i permisos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p>
-          Un compte compartit per empresa. Només veurà els projectes de les
-          sales seleccionades. Els correus es processen en segon pla.
+        <p className="text-sm text-muted-foreground">
+          Un compte per empresa. Només veu els projectes de les sales que
+          marquis.
         </p>
         <ErrorBox error={error} />
         <Button
@@ -105,7 +105,10 @@ export function CompanyPortalAccess({
         >
           Actualitzar estat
         </Button>
-        <form className="space-y-4" onSubmit={send}>
+        <form
+          className="grid gap-4 sm:grid-cols-2 [&>label]:flex [&>label]:flex-col [&>label]:gap-1"
+          onSubmit={send}
+        >
           <label>
             Empresa
             <NativeSelect
@@ -130,7 +133,7 @@ export function CompanyPortalAccess({
             </NativeSelect>
           </label>
           <label>
-            Correu del compte compartit
+            Correu del compte
             <Input
               type="email"
               required
@@ -139,10 +142,13 @@ export function CompanyPortalAccess({
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <fieldset disabled={busy}>
-            <legend>Sales autoritzades</legend>
+          <fieldset
+            disabled={busy}
+            className="flex flex-wrap gap-x-5 gap-y-1 sm:col-span-2"
+          >
+            <legend className="mb-1">Sales autoritzades</legend>
             {rooms.map((r) => (
-              <label className="flex min-h-11 items-center gap-2" key={r.id}>
+              <label className="flex min-h-9 items-center gap-2" key={r.id}>
                 <input
                   type="checkbox"
                   checked={selected.includes(r.id)}
@@ -158,8 +164,11 @@ export function CompanyPortalAccess({
               </label>
             ))}
           </fieldset>
-          <Button disabled={busy || !company || !selected.length}>
-            Enviar invitació / restablir accés
+          <Button
+            className="justify-self-start sm:col-span-2"
+            disabled={busy || !company || !selected.length}
+          >
+            Enviar invitació
           </Button>
         </form>
         {rows.map((row) => (

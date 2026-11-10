@@ -89,7 +89,7 @@ export function EventCommandCenter({ id }: { id: number }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Estat de l’esdeveniment</h2>
+        <span />
         <Button
           variant="outline"
           disabled={busy}

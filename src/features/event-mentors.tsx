@@ -44,13 +44,13 @@ export function EventMentors({ base }: { base: string }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          Mentors · {items.filter((m) => m.active).length} actius
+          {items.filter((m) => m.active).length} mentors actius
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p>
-          Només àpats. L’organització els vincula una acreditació des de
-          l’escàner, sense tiquet d’entrada.
+        <p className="text-sm text-muted-foreground">
+          Només tenen accés als àpats. L’acreditació es vincula des de
+          l’escàner.
         </p>
         <ErrorBox error={error} />
         <CsvImport

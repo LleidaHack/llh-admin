@@ -11,8 +11,8 @@ import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
-  ArrowLeft,
   Pencil,
   Plus,
   RefreshCw,
@@ -249,6 +249,10 @@ export function EventDetail({
     ),
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTopbarSlot(document.getElementById("topbar-slot"));
+  }, []);
   const [lastSections, setLastSections] = useState<Record<string, string>>({});
   const activeGroup = eventMenu.find((group) =>
     group.items.some(([value]) => value === activeSection),
@@ -464,9 +468,6 @@ export function EventDetail({
   const unconfirmed = participants.filter(
     (p) => p.status === "accepted" && p.confirmed_assistance === false,
   );
-  const confirmedCount = participants.filter(
-    (p) => p.status === "accepted" && p.confirmed_assistance,
-  ).length;
   function resendUnconfirmed() {
     const targets = [...unconfirmed];
     const batch = createSequentialMailBatch(targets, async (participant) => {
@@ -553,63 +554,19 @@ export function EventDetail({
     );
   return (
     <div className="flex flex-col gap-6">
-      <Button variant="ghost" className="self-start" onClick={onBack}>
-        <ArrowLeft data-icon="inline-start" />
-        Tots els esdeveniments
-      </Button>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">GESTIÓ DE L'ESDEVENIMENT / {event.id}</p>
-          <h1>{event.name}</h1>
-          <p className="text-muted-foreground">
-            {event.location} · {dateLabel(event.start_date)} —{" "}
-            {dateLabel(event.end_date)}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              void load();
-              void loadCompanies();
-            }}
-            aria-label="Actualitzar l'esdeveniment"
-          >
-            <RefreshCw />
-          </Button>
-          <Button variant="outline" onClick={() => setEditing(true)}>
-            <Pencil data-icon="inline-start" />
-            Editar l'esdeveniment
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              void action(`/v1/event/${id}`, "PUT", { is_open: !event.is_open })
-            }
-          >
-            {event.is_open ? "Tancar inscripcions" : "Obrir inscripcions"}
-          </Button>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={event.is_open ? "default" : "secondary"}>
-          {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"}
-        </Badge>
-        <Badge variant="outline">{event.max_participants} places</Badge>
-        <Badge variant="outline">{participants.length} inscrits</Badge>
-        {participants.some((p) => p.confirmed_assistance !== undefined) && (
-          <Badge variant="outline">
-            {confirmedCount} confirmats · {unconfirmed.length} sense confirmar
-          </Badge>
-        )}
-      </div>
+      {topbarSlot && createPortal(event.name, topbarSlot)}
       <ErrorBox error={error} />
       <Tabs
         value={activeSection}
         onValueChange={selectSection}
         className="pb-24 md:pb-0"
       >
-        <div className="sticky top-0 z-20 bg-background py-3 md:hidden">
+        <div
+          className={cn(
+            "sticky top-0 z-20 bg-background py-3 md:hidden",
+            activeGroup.items.length < 2 && "hidden",
+          )}
+        >
           <label className="text-sm font-medium">
             {activeGroup.label}
             <NativeSelect
@@ -673,7 +630,10 @@ export function EventDetail({
         </nav>
         <TabsList
           aria-label={activeGroup.label}
-          className="mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex"
+          className={cn(
+            "mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex",
+            activeGroup.items.length < 2 && "md:hidden",
+          )}
         >
           {activeGroup.items.map(([value, label]) => (
             <TabsTrigger
@@ -698,12 +658,6 @@ export function EventDetail({
         </TabsContent>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
-            <div>
-              <h2>Inscripcions</h2>
-              <p className="text-sm text-muted-foreground">
-                Revisa les sol·licituds i decideix qui participa.
-              </p>
-            </div>
             <div className="flex flex-wrap gap-2">
               <NativeSelect
                 aria-label="Ordenar les inscripcions"
@@ -836,6 +790,7 @@ export function EventDetail({
                   </TableHead>
                   <TableHead>Participant</TableHead>
                   <TableHead>Correu electrònic</TableHead>
+                  <TableHead>LleidaCoins</TableHead>
                   <TableHead>Inscripció</TableHead>
                   <TableHead>Universitat</TableHead>
                   <TableHead>Estat</TableHead>
@@ -875,6 +830,7 @@ export function EventDetail({
                       </span>
                     </TableCell>
                     <TableCell>{p.email}</TableCell>
+                    <TableCell>{p.lleidacoins ?? "—"}</TableCell>
                     <TableCell>
                       {p.registered_at
                         ? dateLabel(serverDate(p.registered_at).toISOString())
@@ -1020,7 +976,6 @@ export function EventDetail({
           />
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
-          <h2>Equips inscrits</h2>
           <p className="text-sm text-muted-foreground">
             El rebuig de l'equip només afecta els membres no acceptats. Per
             canviar una acceptació, retira-la primer a Inscripcions.
@@ -1101,7 +1056,6 @@ export function EventDetail({
           )}
         </TabsContent>
         <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
-          <h2>Patrocinadors de l'esdeveniment</h2>
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
@@ -1227,8 +1181,7 @@ export function EventDetail({
           )}
         </TabsContent>
         <TabsContent value="meals" className="flex flex-col gap-4 pt-4">
-          <div className="page-heading">
-            <h2>Àpats</h2>
+          <div className="flex justify-end">
             <Button onClick={() => setMealEditor("new")}>
               <Plus data-icon="inline-start" />
               Crear àpat
@@ -1289,7 +1242,6 @@ export function EventDetail({
           />
         </TabsContent>
         <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
-          <VouchersCard id={id} />
           <Card>
             <CardHeader>
               <CardTitle>Registrar l'arribada</CardTitle>
@@ -1321,19 +1273,15 @@ export function EventDetail({
                     />
                   </Field>
                 </FieldGroup>
-                <Button disabled={busy || !code.trim()}>
+                <Button className="self-start" disabled={busy || !code.trim()}>
                   Registrar l'arribada
                 </Button>
               </form>
             </CardContent>
           </Card>
+          <VouchersCard id={id} />
         </TabsContent>
         <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
-          <h2>Comunicacions</h2>
-          <p className="text-sm text-muted-foreground">
-            Exporta correus i envia comunicacions als participants d&apos;aquest
-            esdeveniment.
-          </p>
           <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
@@ -1353,6 +1301,32 @@ export function EventDetail({
           </TabsContent>
         ))}
         <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil data-icon="inline-start" />
+              Editar l'esdeveniment
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() =>
+                void action(`/v1/event/${id}`, "PUT", {
+                  is_open: !event.is_open,
+                })
+              }
+            >
+              {event.is_open ? "Tancar inscripcions" : "Obrir inscripcions"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                void load();
+                void loadCompanies();
+              }}
+            >
+              <RefreshCw data-icon="inline-start" />
+              Actualitzar
+            </Button>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Sobre aquesta edició</CardTitle>

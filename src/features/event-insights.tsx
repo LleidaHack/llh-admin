@@ -184,8 +184,7 @@ export function StatisticsTab({ id }: { id: number }) {
   return (
     <div className="flex flex-col gap-5">
       <Section
-        title="Estadístiques de l'esdeveniment"
-        description="Participants acceptats agrupats per resposta. S’unifiquen majúscules, accents i espais; els valors es mostren de més a menys freqüents."
+        title="Respostes dels acceptats"
         loading={stats.loading}
         error={stats.error}
         onReload={stats.reload}
@@ -198,7 +197,6 @@ export function StatisticsTab({ id }: { id: number }) {
       </Section>
       <Section
         title="Hackers sense inscripció"
-        description="Comptes de hacker que no s'han inscrit a aquest esdeveniment."
         loading={unregistered.loading}
         error={unregistered.error}
         onReload={unregistered.reload}
@@ -220,7 +218,6 @@ export function LogisticsTab({ id }: { id: number }) {
     <div className="flex flex-col gap-5">
       <Section
         title="Talles de samarreta"
-        description="Recompte de talles per preparar el material."
         loading={sizes.loading}
         error={sizes.error}
         onReload={sizes.reload}
@@ -233,7 +230,6 @@ export function LogisticsTab({ id }: { id: number }) {
       </Section>
       <Section
         title="Restriccions alimentàries"
-        description="Previsió de càtering: només participants acceptats amb assistència confirmada."
         loading={food.loading}
         error={food.error}
         onReload={food.reload}
@@ -299,11 +295,7 @@ export function AcceptedMailsCard({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Correus dels participants acceptats</CardTitle>
-        <CardDescription>
-          Exporta les adreces per enviar comunicacions des d&apos;una altra
-          eina.
-        </CardDescription>
+        <CardTitle>Exportar correus dels acceptats</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <ErrorBox error={error} />
@@ -372,10 +364,9 @@ export function MailActions({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comunicacions per correu</CardTitle>
+        <CardTitle>Enviar correus</CardTitle>
         <CardDescription>
-          Accions que envien correus reals als participants. Confirma abans de
-          continuar.
+          Envien correus reals als participants.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
@@ -712,10 +703,9 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Registrar un àpat amb acreditació</CardTitle>
+        <CardTitle>Registrar un àpat</CardTitle>
         <CardDescription>
-          Introdueix el codi de l’acreditació física. Els tiquets d’entrada no
-          són vàlids per als àpats.
+          Codi de l’acreditació física (no el tiquet d’entrada).
         </CardDescription>
       </CardHeader>
       <CardContent>

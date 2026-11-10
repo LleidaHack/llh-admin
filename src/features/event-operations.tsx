@@ -1,7 +1,6 @@
 "use client";
 import { CsvImport } from "@/components/csv-import";
 import { importChallenges } from "@/lib/csv-import";
-import { EventMentors } from "./event-mentors";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { setUnsavedChanges } from "@/lib/unsaved";
@@ -91,20 +90,6 @@ export type OperationSection =
   | "alerts"
   | "audit"
   | "roles";
-const sectionTitles: Record<OperationSection, string> = {
-  live: "Pàgina Live",
-  activities: "Agenda i activitats",
-  challenges: "Reptes i recursos",
-  prizes: "Premis",
-  rooms: "Sales i horaris del jurat",
-  meals: "Rondes dels àpats",
-  coins: "LleidaCoins",
-  judging: "Torns de presentació",
-  devpost: "Projectes de Devpost",
-  alerts: "Avisos",
-  audit: "Traçabilitat",
-  roles: "Rols i permisos",
-};
 export function EventOperations({
   id,
   section,
@@ -117,6 +102,7 @@ export function EventOperations({
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  const [teamQuery, setTeamQuery] = useState("");
   const [staff, setStaff] = useState<Item[]>([]);
   const tab = section;
   const [history, setHistory] = useState<Item[]>([]),
@@ -252,9 +238,21 @@ export function EventOperations({
   }, [id, section]);
   if (!data || !draft)
     return <p role="status">{error || "Carregant operacions…"}</p>;
+  const fold = (text: string) =>
+    text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const teamNeedle = fold(teamQuery.trim());
+  const visiblePresentations: Item[] = (data.presentations ?? []).filter(
+    (p: Item) =>
+      !teamNeedle ||
+      fold(
+        `${p.team} ${data.rooms?.find((r: Item) => r.id === p.room)?.title ?? ""}`,
+      ).includes(teamNeedle),
+  );
   return (
     <div className="event-operations space-y-5">
-      <h2 className="text-xl font-bold">{sectionTitles[section]}</h2>
       {section === "challenges" && (
         <ChallengeChoices
           id={id}
@@ -295,24 +293,26 @@ export function EventOperations({
             );
           }}
         >
-          <div
-            className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
-            aria-label="Desar configuració"
-          >
-            <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
-              {busy
-                ? "Desant…"
-                : error ||
-                  (dirty
-                    ? "Canvis pendents de desar"
-                    : notice || "Configuració desada")}
-            </p>
-            {dirty && (
-              <Button type="submit" disabled={busy} className="shrink-0">
-                {busy ? "Desant…" : "Desar configuració"}
-              </Button>
-            )}
-          </div>
+          {(dirty || busy) && (
+            <div
+              className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
+              aria-label="Desar canvis"
+            >
+              <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
+                {busy
+                  ? "Desant…"
+                  : error ||
+                    (dirty
+                      ? "Canvis pendents de desar"
+                      : notice || "Configuració desada")}
+              </p>
+              {dirty && (
+                <Button type="submit" disabled={busy} className="shrink-0">
+                  {busy ? "Desant…" : "Desar canvis"}
+                </Button>
+              )}
+            </div>
+          )}
           {(tab === "live" || tab === "rooms") && (
             <Card>
               <CardHeader>
@@ -499,9 +499,11 @@ export function EventOperations({
             )
             .map(([key, title]) => (
               <Card key={key}>
-                <CardHeader>
-                  <CardTitle>{title}</CardTitle>
-                </CardHeader>
+                {key !== tab && (
+                  <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                  </CardHeader>
+                )}
                 <CardContent className="space-y-4">
                   {["challenges", "decoy_challenges"].includes(key) && (
                     <CsvImport
@@ -717,7 +719,6 @@ export function EventOperations({
       )}
       {tab === "meals" && (
         <div className="space-y-4">
-          <EventMentors base={base} />
           <p>
             Una recollida per persona i ronda. Obrir una ronda nova no esborra
             les anteriors.
@@ -732,7 +733,9 @@ export function EventOperations({
                 <CardHeader>
                   <CardTitle>
                     {meal.name} · Ronda {r.round} ·{" "}
-                    {r.open ? "Oberta" : "Tancada"}
+                    {r.open
+                      ? "Habilitat a l’escàner"
+                      : "Deshabilitat a l’escàner"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -747,7 +750,7 @@ export function EventOperations({
                       ["next", "Obrir ronda següent"],
                       [
                         r.open ? "close" : "open",
-                        r.open ? "Tancar ronda" : "Reobrir ronda",
+                        r.open ? "Deshabilitar àpat" : "Habilitar àpat",
                       ],
                     ].map(([action, label]) => (
                       <Button
@@ -1186,8 +1189,8 @@ export function EventOperations({
                   })
                 : null;
               return (
-                <Card key={room.id}>
-                  <CardContent className="pt-4">
+                <Card key={room.id} className="py-3">
+                  <CardContent className="">
                     <strong>{room.title}</strong>
                     <p>
                       {turns.length} equips
@@ -1200,7 +1203,20 @@ export function EventOperations({
               );
             })}
           </div>
-          {data.presentations.map((p: Item) => (
+          <Input
+            type="search"
+            aria-label="Cercar equip"
+            placeholder="Cercar equip o sala…"
+            className="sm:max-w-sm"
+            value={teamQuery}
+            onChange={(e) => setTeamQuery(e.target.value)}
+          />
+          {!visiblePresentations.length && (
+            <p className="text-sm text-muted-foreground">
+              Cap equip coincideix amb la cerca.
+            </p>
+          )}
+          {visiblePresentations.map((p: Item) => (
             <PresentationRow
               key={`${p.id}-${p.version}`}
               presentation={p}
@@ -1367,9 +1383,24 @@ function PresentationRow({
     pinned: !!p.pinned,
     override: false,
   });
+  const dirty =
+    draft.room !== p.room ||
+    draft.state !== p.state ||
+    draft.position !== p.position ||
+    draft.scheduled_at !== p.scheduled_at ||
+    draft.pinned !== !!p.pinned ||
+    draft.override;
+  const STATES = [
+    ["waiting", "En espera"],
+    ["called", "Cridat"],
+    ["presenting", "Presentant"],
+    ["done", "Finalitzat"],
+    ["absent", "Absent"],
+    ["postponed", "Ajornat"],
+  ];
   return (
     <form
-      className="grid gap-3 rounded border p-4 md:grid-cols-3"
+      className="flex flex-col gap-2 rounded border bg-card p-3"
       onSubmit={(e) => {
         e.preventDefault();
         void save({
@@ -1380,55 +1411,46 @@ function PresentationRow({
         });
       }}
     >
-      <strong>{p.team}</strong>
-      <select
-        aria-label="Sala"
-        value={draft.room}
-        onChange={(e) => setDraft({ ...draft, room: e.target.value })}
-      >
-        {rooms.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.title}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Estat"
-        value={draft.state}
-        onChange={(e) => setDraft({ ...draft, state: e.target.value })}
-      >
-        {["waiting", "called", "presenting", "done", "absent", "postponed"].map(
-          (s, i) => (
-            <option key={s} value={s}>
-              {
-                [
-                  "En espera",
-                  "Cridat",
-                  "Presentant",
-                  "Finalitzat",
-                  "Absent",
-                  "Ajornat",
-                ][i]
-              }
+      <div className="flex flex-wrap items-center gap-2">
+        <strong className="min-w-32 flex-1">{p.team}</strong>
+        <select
+          aria-label="Sala"
+          value={draft.room}
+          onChange={(e) => setDraft({ ...draft, room: e.target.value })}
+        >
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.title}
             </option>
-          ),
-        )}
-      </select>
-      <label>
-        Ordre
+          ))}
+        </select>
+        <select
+          aria-label="Estat"
+          value={draft.state}
+          onChange={(e) => setDraft({ ...draft, state: e.target.value })}
+        >
+          {STATES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
         <Input
+          aria-label="Ordre"
+          title="Ordre"
           type="number"
           min={0}
+          className="w-16"
           value={draft.position}
           onChange={(e) =>
             setDraft({ ...draft, position: Number(e.target.value) })
           }
         />
-      </label>
-      <label>
-        Hora estimada
         <Input
+          aria-label="Hora estimada"
+          title="Hora estimada"
           type="datetime-local"
+          className="w-auto"
           value={localDate(draft.scheduled_at)}
           onChange={(e) =>
             setDraft({
@@ -1439,53 +1461,61 @@ function PresentationRow({
             })
           }
         />
-      </label>
-      <div>
-        <label className="block">
+        <label className="flex items-center gap-1 text-sm">
           <input
             type="checkbox"
             checked={draft.pinned}
             onChange={(e) => setDraft({ ...draft, pinned: e.target.checked })}
-          />{" "}
-          Fixar horari
+          />
+          Fixar
         </label>
-        <label>
-          <input
-            type="checkbox"
-            disabled={!canOverride}
-            checked={draft.override}
-            onChange={(e) => setDraft({ ...draft, override: e.target.checked })}
-          />{" "}
-          Autoritzar excepció
-        </label>
+        {canOverride && (
+          <label className="flex items-center gap-1 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.override}
+              onChange={(e) =>
+                setDraft({ ...draft, override: e.target.checked })
+              }
+            />
+            Excepció
+          </label>
+        )}
+        {dirty && (
+          <Button size="sm" disabled={busy}>
+            Desar
+          </Button>
+        )}
       </div>
-      <Button disabled={busy}>Aplicar canvi</Button>
-      <div className="flex flex-wrap gap-2 md:col-span-3">
+      <div className="flex flex-wrap gap-1">
         {["waiting", "called", "postponed"].includes(p.state) && (
           <Button
             type="button"
-            variant="outline"
+            size="sm"
+            variant="ghost"
             disabled={busy}
             onClick={() => void recovery("absent")}
           >
-            Marcar absent i cridar següent
+            Absent i cridar següent
           </Button>
         )}
         {["absent", "postponed", "called"].includes(p.state) && (
           <Button
             type="button"
-            variant="outline"
+            size="sm"
+            variant="ghost"
             disabled={busy}
             onClick={() => void recovery("requeue")}
           >
-            Tornar al final de la cua
+            Al final de la cua
           </Button>
         )}
-        {!["presenting", "done"].includes(p.state) && (
+        {!["presenting", "done"].includes(p.state) && draft.room !== p.room && (
           <Button
             type="button"
+            size="sm"
             variant="outline"
-            disabled={busy || draft.room === p.room}
+            disabled={busy}
             onClick={() => void recovery("move")}
           >
             Moure a la sala seleccionada
