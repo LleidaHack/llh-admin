@@ -11,6 +11,7 @@ import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Pencil,
   Plus,
@@ -248,6 +249,10 @@ export function EventDetail({
     ),
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
+  const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTopbarSlot(document.getElementById("topbar-slot"));
+  }, []);
   const [lastSections, setLastSections] = useState<Record<string, string>>({});
   const activeGroup = eventMenu.find((group) =>
     group.items.some(([value]) => value === activeSection),
@@ -549,6 +554,7 @@ export function EventDetail({
     );
   return (
     <div className="flex flex-col gap-6">
+      {topbarSlot && createPortal(event.name, topbarSlot)}
       <ErrorBox error={error} />
       <Tabs
         value={activeSection}

@@ -170,6 +170,10 @@ export default function PanelLayout({
             <span className="text-sm text-muted-foreground">
               Panell de gestió
             </span>
+            <span
+              id="topbar-slot"
+              className="min-w-0 truncate text-sm font-semibold"
+            />
             <Badge variant="outline">{envLabel}</Badge>
           </div>
           <div className="flex items-center gap-3">
