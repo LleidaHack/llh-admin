@@ -85,3 +85,25 @@ describe("backend proxy transport recovery", () => {
     expect((await run()).status).toBe(502);
   });
 });
+
+it("propagates the response reference to the backend without logging credentials", async () => {
+  const log = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      Response.json({ detail: "Unavailable" }, { status: 503 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  const response = await proxyBackend(
+    "https://backend.example/v1/operations/5/status",
+    "/v1/operations/5/status",
+    { method: "GET", headers: { authorization: "Bearer private-token" } },
+  );
+  const headers = new Headers(fetch.mock.calls[0][1].headers);
+  expect(headers.get("x-request-id")).toBe(
+    response.headers.get("x-request-id"),
+  );
+  expect(headers.get("authorization")).toBe("Bearer private-token");
+  expect(JSON.stringify(log.mock.calls)).not.toContain("private-token");
+  expect(fetch).toHaveBeenCalledTimes(1);
+});

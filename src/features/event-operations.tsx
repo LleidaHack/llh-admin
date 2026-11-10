@@ -1207,6 +1207,17 @@ export function EventOperations({
               rooms={data.rooms}
               busy={busy}
               canOverride={data.access_role === "superadmin"}
+              recover={(action, room, reason, operationId) =>
+                run(() =>
+                  request(`${base}/presentations/${p.id}/recovery`, "POST", {
+                    action,
+                    room,
+                    reason,
+                    version: p.version,
+                    operation_id: operationId,
+                  }),
+                )
+              }
               save={(body) =>
                 run(() =>
                   request(`${base}/presentations/${p.id}`, "PATCH", body),
@@ -1326,14 +1337,31 @@ function PresentationRow({
   rooms,
   busy,
   canOverride,
+  recover,
   save,
 }: {
   presentation: Item;
   rooms: Item[];
   busy: boolean;
   canOverride: boolean;
+  recover: (
+    action: string,
+    room: string | null,
+    reason: string,
+    operationId: string,
+  ) => Promise<void>;
   save: (body: Item) => Promise<void>;
 }) {
+  const recoveryAttempt = useRef<{ key: string; id: string } | null>(null);
+  async function recovery(action: string) {
+    const reason = prompt("Motiu de la correcció (quedarà a l’historial):");
+    if (!reason || reason.trim().length < 3) return;
+    const room = action === "move" ? draft.room : null;
+    const key = JSON.stringify([action, room, reason]);
+    if (recoveryAttempt.current?.key !== key)
+      recoveryAttempt.current = { key, id: crypto.randomUUID() };
+    await recover(action, room, reason, recoveryAttempt.current.id);
+  }
   const [draft, setDraft] = useState<Item>({
     ...p,
     pinned: !!p.pinned,
@@ -1432,6 +1460,38 @@ function PresentationRow({
         </label>
       </div>
       <Button disabled={busy}>Aplicar canvi</Button>
+      <div className="flex flex-wrap gap-2 md:col-span-3">
+        {["waiting", "called", "postponed"].includes(p.state) && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void recovery("absent")}
+          >
+            Marcar absent i cridar següent
+          </Button>
+        )}
+        {["absent", "postponed", "called"].includes(p.state) && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void recovery("requeue")}
+          >
+            Tornar al final de la cua
+          </Button>
+        )}
+        {!["presenting", "done"].includes(p.state) && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || draft.room === p.room}
+            onClick={() => void recovery("move")}
+          >
+            Moure a la sala seleccionada
+          </Button>
+        )}
+      </div>
     </form>
   );
 }

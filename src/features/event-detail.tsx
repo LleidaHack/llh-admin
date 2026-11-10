@@ -2,6 +2,7 @@
 import { EventMentors } from "./event-mentors";
 import { CompanyPortalAccess } from "./company-portal-access";
 import { createSequentialMailBatch } from "@/lib/mail-batch";
+import { EventCommandCenter } from "./event-command-center";
 import { EventOperations, type OperationSection } from "./event-operations";
 import { useCanRunCritical } from "@/lib/viewer";
 import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
@@ -84,6 +85,7 @@ import {
 import { dateLabel, serverDate } from "@/lib/events";
 import { cn } from "@/lib/utils";
 const eventMenu = [
+  { label: "En directe", items: [["status", "Estat de l’esdeveniment"]] },
   {
     label: "Participants",
     items: [
@@ -246,7 +248,7 @@ export function EventDetail({
       null,
     ),
     [code, setCode] = useState("");
-  const [activeSection, setActiveSection] = useState("participants");
+  const [activeSection, setActiveSection] = useState("status");
   const [lastSections, setLastSections] = useState<Record<string, string>>({});
   const activeGroup = eventMenu.find((group) =>
     group.items.some(([value]) => value === activeSection),
@@ -638,9 +640,14 @@ export function EventDetail({
               }
             >
               {
-                ["Persones", "Jornada", "Projectes", "Comunicació", "Més"][
-                  index
-                ]
+                [
+                  "Estat",
+                  "Persones",
+                  "Jornada",
+                  "Projectes",
+                  "Comunic.",
+                  "Més",
+                ][index]
               }
             </Button>
           ))}
@@ -1330,6 +1337,9 @@ export function EventDetail({
           <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
+        </TabsContent>
+        <TabsContent value="status" className="pt-4">
+          <EventCommandCenter id={id} />
         </TabsContent>
         <TabsContent value="statistics" className="pt-4">
           <StatisticsTab id={id} />
