@@ -1,14 +1,7 @@
 import { useState } from "react";
-import { Plus, ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
+import { Plus, CalendarDays, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EditDialog, EmptyBox, type FormField } from "@/components/shared";
@@ -136,88 +129,56 @@ export function Events({
   );
   return (
     <div className="flex flex-col gap-7">
-      <div className="page-heading events-intro">
-        <div>
-          <p className="eyebrow">LA TEVA PROPERA EDICIÓ</p>
-          <h1>Esdeveniments</h1>
-          <p className="text-muted-foreground">
-            Tot el que necessites per posar una hackató en marxa.
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1>Esdeveniments</h1>
+        <div className="flex gap-2">
+          <Input
+            aria-label="Cercar esdeveniments"
+            placeholder="Cercar…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="sm:w-64"
+          />
+          <Button onClick={() => setCreate(true)}>
+            <Plus data-icon="inline-start" />
+            Crear
+          </Button>
         </div>
-        <Button variant="secondary" onClick={() => setCreate(true)}>
-          <Plus data-icon="inline-start" />
-          Crear esdeveniment
-        </Button>
-      </div>
-      <div className="stats-grid">
-        {[
-          ["Esdeveniments actius", events.length],
-          ["Inscripcions obertes", events.filter((e) => e.is_open).length],
-          [
-            "Places previstes",
-            events.reduce((n, e) => n + e.max_participants, 0),
-          ],
-        ].map(([label, value]) => (
-          <Card key={label}>
-            <CardHeader>
-              <CardDescription>{label}</CardDescription>
-              <CardTitle className="tabular-nums">{value}</CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2>
-          Els teus esdeveniments{" "}
-          <span className="text-muted-foreground">/ {events.length}</span>
-        </h2>
-        <Input
-          aria-label="Cercar esdeveniments"
-          placeholder="Cercar per nom o ubicació…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="sm:max-w-xs"
-        />
       </div>
       {filtered.length ? (
         <div className="grid gap-5 xl:grid-cols-2">
           {filtered.map((e) => (
-            <Card key={e.id} className="event-card">
+            <Card
+              key={e.id}
+              role="link"
+              tabIndex={0}
+              onClick={() => onSelect(e.id)}
+              onKeyDown={(k) => {
+                if (k.key === "Enter") onSelect(e.id);
+              }}
+              className="event-card cursor-pointer transition-colors hover:border-foreground/40"
+            >
               <CardHeader>
-                <div className="mb-3 flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    EDICIÓ / {new Date(e.start_date).getFullYear()}
-                  </span>
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle>{e.name}</CardTitle>
                   <Badge variant={e.is_open ? "default" : "secondary"}>
-                    {e.is_open
-                      ? "Inscripcions obertes"
-                      : "Inscripcions tancades"}
+                    {e.is_open ? "Oberta" : "Tancada"}
                   </Badge>
                 </div>
-                <CardTitle>{e.name}</CardTitle>
-                <CardDescription>
-                  {e.description || "Sense descripció"}
-                </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <p className="flex items-center gap-2 text-sm">
+              <CardContent className="flex flex-col gap-2 text-sm">
+                <p className="flex items-center gap-2">
                   <CalendarDays className="size-4 text-muted-foreground" />
                   {dateLabel(e.start_date)} — {dateLabel(e.end_date)}
                 </p>
-                <p className="flex items-center gap-2 text-sm">
+                <p className="flex items-center gap-2">
                   <MapPin className="size-4 text-muted-foreground" />
                   {e.location}
                 </p>
-              </CardContent>
-              <CardFooter className="justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {e.max_participants} places · Equips de {e.max_group_size}
+                <p className="text-muted-foreground">
+                  {e.max_participants} places · equips de {e.max_group_size}
                 </p>
-                <Button variant="outline" onClick={() => onSelect(e.id)}>
-                  Gestionar
-                  <ArrowUpRight data-icon="inline-end" />
-                </Button>
-              </CardFooter>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -229,9 +190,7 @@ export function Events({
               : "El proper esdeveniment comença aquí"
           }
         >
-          {query
-            ? "Prova amb un altre nom."
-            : "Crea la teva primera edició per gestionar inscripcions, equips i patrocinadors."}
+          {query ? "Prova amb un altre nom." : "Crea la primera edició."}
         </EmptyBox>
       )}
       {create && (

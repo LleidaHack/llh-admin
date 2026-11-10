@@ -112,7 +112,14 @@ export function UserProfileDetails({ user }: { user: UserProfile }) {
   return (
     <div className="flex flex-col gap-5">
       <ErrorBox error={error} />
-      {user.id != null && <NicknameCorrection userId={user.id} onSaved={nickname => setProfile(current => ({ ...current, nickname }))} />}
+      {user.id != null && (
+        <NicknameCorrection
+          userId={user.id}
+          onSaved={(nickname) =>
+            setProfile((current) => ({ ...current, nickname }))
+          }
+        />
+      )}
       {user.id != null && (
         <UserAccessRole
           key={user.id}

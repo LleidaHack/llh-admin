@@ -90,7 +90,7 @@ export function CompanyPortalAccess({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Portal d’empreses · Invitacions i permisos</CardTitle>
+        <CardTitle>Invitacions i permisos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p>

@@ -88,16 +88,6 @@ export function EventCommandCenter({ id }: { id: number }) {
   }
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Estat de l’esdeveniment</h2>
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => void run(load)}
-        >
-          Actualitzar
-        </Button>
-      </div>
       {(error || pollError) && (
         <p role="alert" className="text-destructive">
           {error || pollError} Les dades anteriors poden estar desactualitzades.
@@ -108,21 +98,24 @@ export function EventCommandCenter({ id }: { id: number }) {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Actualitzat: {new Date(data.server_time).toLocaleTimeString("ca")} ·
-            Refresc cada 15 segons
+            Actualitzat a les{" "}
+            {new Date(data.server_time).toLocaleTimeString("ca")} · s’actualitza
+            sol
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
-              ["Assistents previstos", data.attendance.expected],
-              ["Check-ins fets", data.attendance.checked_in],
-              ["Pendents d’arribar", data.attendance.pending],
+              ["Previstos", data.attendance.expected],
+              ["Han arribat", data.attendance.checked_in],
+              ["Falten", data.attendance.pending],
             ].map(([label, count]) => (
-              <Card key={label}>
-                <CardHeader>
-                  <CardTitle>{label}</CardTitle>
-                </CardHeader>
-                <CardContent className="text-3xl font-semibold">
-                  {count}
+              <Card key={label} className="gap-1 py-3 sm:py-4">
+                <CardContent className="px-3 sm:px-6">
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    {label}
+                  </p>
+                  <p className="text-2xl font-semibold tabular-nums sm:text-3xl">
+                    {count}
+                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -146,7 +139,7 @@ export function EventCommandCenter({ id }: { id: number }) {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Previsió de restriccions alimentàries</CardTitle>
+                <CardTitle>Restriccions alimentàries</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="mb-3 text-sm">
@@ -220,7 +213,7 @@ export function EventCommandCenter({ id }: { id: number }) {
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>Incidències de l’organització</CardTitle>
+              <CardTitle>Incidències</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <form

@@ -249,7 +249,11 @@ export function EventOperations({
     return <p role="status">{error || "Carregant operacions…"}</p>;
   return (
     <div className="event-operations space-y-5">
-      <h2 className="text-xl font-bold">{sectionTitles[section]}</h2>
+      {(section === "rooms" ||
+        section === "judging" ||
+        section === "audit") && (
+        <h3 className="text-lg font-semibold">{sectionTitles[section]}</h3>
+      )}
       {section === "challenges" && (
         <ChallengeChoices
           id={id}
@@ -290,24 +294,26 @@ export function EventOperations({
             );
           }}
         >
-          <div
-            className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
-            aria-label="Desar configuració"
-          >
-            <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
-              {busy
-                ? "Desant…"
-                : error ||
-                  (dirty
-                    ? "Canvis pendents de desar"
-                    : notice || "Configuració desada")}
-            </p>
-            {dirty && (
-              <Button type="submit" disabled={busy} className="shrink-0">
-                {busy ? "Desant…" : "Desar configuració"}
-              </Button>
-            )}
-          </div>
+          {(dirty || busy) && (
+            <div
+              className="sticky top-16 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
+              aria-label="Desar configuració"
+            >
+              <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
+                {busy
+                  ? "Desant…"
+                  : error ||
+                    (dirty
+                      ? "Canvis pendents de desar"
+                      : notice || "Configuració desada")}
+              </p>
+              {dirty && (
+                <Button type="submit" disabled={busy} className="shrink-0">
+                  {busy ? "Desant…" : "Desar canvis"}
+                </Button>
+              )}
+            </div>
+          )}
           {(tab === "live" || tab === "rooms") && (
             <Card>
               <CardHeader>

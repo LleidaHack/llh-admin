@@ -132,7 +132,6 @@ export default function PanelLayout({
         <div className="brand">
           <span className="brand-wordmark" role="img" aria-label="LleidaHack" />
         </div>
-        <p className="nav-caption">ESPAI D&apos;ORGANITZACIÓ</p>
         <nav aria-label="Navegació principal">
           {nav.map((item) => {
             const active =
@@ -167,9 +166,6 @@ export default function PanelLayout({
             >
               {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
             </Button>
-            <span className="text-sm text-muted-foreground">
-              Panell de gestió
-            </span>
             <Badge variant="outline">{envLabel}</Badge>
           </div>
           <div className="flex items-center gap-3">

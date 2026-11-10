@@ -31,7 +31,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Table,
   TableHeader,
@@ -85,23 +85,28 @@ import {
 import { dateLabel, serverDate } from "@/lib/events";
 import { cn } from "@/lib/utils";
 const eventMenu = [
-  { label: "En directe", items: [["status", "Estat de l’esdeveniment"]] },
   {
-    label: "Participants",
+    label: "En directe",
+    items: [
+      ["status", "Estat"],
+      ["statistics", "Estadístiques"],
+    ],
+  },
+  {
+    label: "Persones",
     items: [
       ["participants", "Inscripcions"],
       ["teams", "Equips"],
-      ["checkin", "Assistència"],
       ["mentors", "Mentors"],
     ],
   },
   {
-    label: "Jornada",
+    label: "Durant l’esdeveniment",
     items: [
-      ["activities", "Agenda i activitats"],
-      ["meals", "Àpats i rondes"],
+      ["checkin", "Acreditació"],
+      ["meals", "Àpats"],
+      ["activities", "Agenda"],
       ["coins", "LleidaCoins"],
-      ["prizes", "Premis"],
       ["logistics", "Logística"],
     ],
   },
@@ -110,41 +115,50 @@ const eventMenu = [
     items: [
       ["challenges", "Reptes"],
       ["devpost", "Devpost"],
-      ["rooms", "Sales i horaris"],
-      ["judging", "Torns de presentació"],
-      ["company-portal", "Portal d’empreses"],
+      ["judging", "Jurat i sales"],
+      ["prizes", "Premis"],
     ],
   },
   {
     label: "Comunicació",
     items: [
-      ["live", "Pàgina Live"],
+      ["comms", "Correus"],
       ["alerts", "Avisos"],
-      ["comms", "Correu als participants"],
+      ["live", "Pàgina Live"],
     ],
   },
   {
-    label: "Administració",
+    label: "Configuració",
     items: [
       ["settings", "Informació"],
       ["sponsors", "Patrocinadors"],
-      ["statistics", "Estadístiques"],
-      ["audit", "Historial d’inscripcions"],
-      ["operation-audit", "Traçabilitat"],
+      ["company-portal", "Portal d’empreses"],
+      ["audit", "Historial"],
     ],
   },
 ];
+const sectionLabels = Object.fromEntries(
+  eventMenu.flatMap((group) => group.items),
+) as Record<string, string>;
+// Old section keys that were merged into another section.
+const legacySections: Record<string, string> = {
+  rooms: "judging",
+  "operation-audit": "audit",
+};
+function sectionFromUrl() {
+  if (typeof window === "undefined") return "status";
+  const raw = new URLSearchParams(window.location.search).get("s") || "";
+  const key = legacySections[raw] || raw;
+  return key in sectionLabels ? key : "status";
+}
 const standaloneOperations: { value: string; section: OperationSection }[] = [
   { value: "live", section: "live" },
   { value: "activities", section: "activities" },
   { value: "challenges", section: "challenges" },
   { value: "devpost", section: "devpost" },
-  { value: "rooms", section: "rooms" },
-  { value: "judging", section: "judging" },
   { value: "coins", section: "coins" },
   { value: "prizes", section: "prizes" },
   { value: "alerts", section: "alerts" },
-  { value: "operation-audit", section: "audit" },
 ];
 // Sponsor tiers shared with the HackEPS frontend: 0 = highest.
 const TIERS = [
@@ -249,19 +263,23 @@ export function EventDetail({
     ),
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
-  const [lastSections, setLastSections] = useState<Record<string, string>>({});
-  const activeGroup = eventMenu.find((group) =>
-    group.items.some(([value]) => value === activeSection),
-  )!;
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => {
+    setActiveSection(sectionFromUrl());
+    const onPop = () => setActiveSection(sectionFromUrl());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const selectSection = (value: string) => {
-    if (value !== activeSection && !confirmDiscardUnsaved()) return;
+    setNavOpen(false);
+    if (value === activeSection) return;
+    if (!confirmDiscardUnsaved()) return;
     setUnsavedChanges(false);
     setActiveSection(value);
-    const group = eventMenu.find((group) =>
-      group.items.some(([key]) => key === value),
-    );
-    if (group)
-      setLastSections((previous) => ({ ...previous, [group.label]: value }));
+    const url = new URL(window.location.href);
+    url.searchParams.set("s", value);
+    window.history.pushState(null, "", url);
+    window.scrollTo({ top: 0 });
   };
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -551,35 +569,89 @@ export function EventDetail({
         </Button>
       </>
     );
+  const count = (key: string) =>
+    key === "participants"
+      ? participants.length
+      : key === "teams"
+        ? teams.length
+        : undefined;
+  const sectionNav = (
+    <nav
+      aria-label="Seccions de l’esdeveniment"
+      className="flex flex-col gap-4"
+    >
+      {eventMenu.map((group) => (
+        <div key={group.label} className="flex flex-col gap-0.5">
+          <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {group.label}
+          </p>
+          {group.items.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => selectSection(key)}
+              aria-current={key === activeSection ? "page" : undefined}
+              className={cn(
+                "flex min-h-10 items-center justify-between rounded-md px-3 text-left text-sm transition-colors hover:bg-muted",
+                key === activeSection && "bg-muted font-semibold",
+              )}
+            >
+              {label}
+              {count(key) !== undefined && (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {count(key)}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      ))}
+    </nav>
+  );
   return (
-    <div className="flex flex-col gap-6">
-      <Button variant="ghost" className="self-start" onClick={onBack}>
-        <ArrowLeft data-icon="inline-start" />
-        Tots els esdeveniments
-      </Button>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">GESTIÓ DE L'ESDEVENIMENT / {event.id}</p>
-          <h1>{event.name}</h1>
-          <p className="text-muted-foreground">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Esdeveniments
+          </button>
+          <h1 className="truncate">{event.name}</h1>
+          <p className="text-sm text-muted-foreground">
             {event.location} · {dateLabel(event.start_date)} —{" "}
             {dateLabel(event.end_date)}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <Badge variant={event.is_open ? "default" : "secondary"}>
+              {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"}
+            </Badge>
+            <span className="text-muted-foreground">
+              {participants.length}/{event.max_participants} inscrits
+              {participants.some((p) => p.confirmed_assistance !== undefined) &&
+                ` · ${confirmedCount} confirmats`}
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
+            size="icon"
             onClick={() => {
               void load();
               void loadCompanies();
             }}
-            aria-label="Actualitzar l'esdeveniment"
+            aria-label="Actualitzar"
+            title="Actualitzar"
           >
             <RefreshCw />
           </Button>
           <Button variant="outline" onClick={() => setEditing(true)}>
             <Pencil data-icon="inline-start" />
-            Editar l'esdeveniment
+            Editar
           </Button>
           <Button
             disabled={busy}
@@ -591,818 +663,764 @@ export function EventDetail({
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={event.is_open ? "default" : "secondary"}>
-          {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"}
-        </Badge>
-        <Badge variant="outline">{event.max_participants} places</Badge>
-        <Badge variant="outline">{participants.length} inscrits</Badge>
-        {participants.some((p) => p.confirmed_assistance !== undefined) && (
-          <Badge variant="outline">
-            {confirmedCount} confirmats · {unconfirmed.length} sense confirmar
-          </Badge>
-        )}
-      </div>
       <ErrorBox error={error} />
-      <Tabs
-        value={activeSection}
-        onValueChange={selectSection}
-        className="pb-24 md:pb-0"
-      >
-        <div className="sticky top-0 z-20 bg-background py-3 md:hidden">
-          <label className="text-sm font-medium">
-            {activeGroup.label}
-            <NativeSelect
-              aria-label="Secció de gestió"
-              value={activeSection}
-              onChange={(e) => selectSection(e.target.value)}
-            >
-              {activeGroup.items.map(([key, label]) => (
-                <NativeSelectOption key={key} value={key}>
-                  {label}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-        </div>
-        <nav
-          aria-label="Navegació mòbil de l’esdeveniment"
-          className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background p-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
+      <div className="sticky top-0 z-30 -mx-4 border-b bg-background px-4 py-2 md:hidden">
+        <Button
+          variant="outline"
+          className="w-full justify-between"
+          onClick={() => setNavOpen(true)}
+          aria-haspopup="dialog"
         >
-          {eventMenu.map((group, index) => (
-            <Button
-              className="min-h-12 min-w-0 flex-1 px-1 text-[11px]"
-              key={group.label}
-              variant={activeGroup.label === group.label ? "default" : "ghost"}
-              aria-pressed={activeGroup.label === group.label}
-              onClick={() =>
-                selectSection(lastSections[group.label] || group.items[0][0])
-              }
+          <span className="truncate">{sectionLabels[activeSection]}</span>
+          <MoreHorizontal />
+        </Button>
+      </div>
+      <Dialog open={navOpen} onOpenChange={setNavOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Seccions</DialogTitle>
+          </DialogHeader>
+          {sectionNav}
+        </DialogContent>
+      </Dialog>
+      <div className="md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
+        <aside className="hidden md:block">
+          <div className="sticky top-4">{sectionNav}</div>
+        </aside>
+        <div className="min-w-0">
+          <h2 className="mb-1 text-xl font-semibold">
+            {sectionLabels[activeSection]}
+          </h2>
+          <Tabs value={activeSection} onValueChange={selectSection}>
+            <TabsContent value="mentors" className="pt-4">
+              <EventMentors base={`/v1/operations/${id}`} />
+            </TabsContent>
+            <TabsContent value="company-portal" className="pt-4">
+              <CompanyPortalAccess id={id} companies={companies} />
+            </TabsContent>
+            <TabsContent
+              value="participants"
+              className="flex flex-col gap-4 pt-4"
             >
-              {
-                [
-                  "Estat",
-                  "Persones",
-                  "Jornada",
-                  "Projectes",
-                  "Comunic.",
-                  "Més",
-                ][index]
-              }
-            </Button>
-          ))}
-        </nav>
-        <nav
-          aria-label="Àrees de gestió de l’esdeveniment"
-          className="hidden flex-wrap gap-2 border-b pb-4 md:flex"
-        >
-          {eventMenu.map((group) => (
-            <Button
-              key={group.label}
-              variant={
-                activeGroup.label === group.label ? "default" : "outline"
-              }
-              aria-pressed={activeGroup.label === group.label}
-              onClick={() =>
-                selectSection(lastSections[group.label] || group.items[0][0])
-              }
-            >
-              {group.label}
-            </Button>
-          ))}
-        </nav>
-        <TabsList
-          aria-label={activeGroup.label}
-          className="mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex"
-        >
-          {activeGroup.items.map(([value, label]) => (
-            <TabsTrigger
-              className="min-h-10 flex-none px-3"
-              key={value}
-              value={value}
-            >
-              {label}
-              {value === "participants"
-                ? ` (${participants.length})`
-                : value === "teams"
-                  ? ` (${teams.length})`
-                  : ""}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value="mentors" className="pt-4">
-          <EventMentors base={`/v1/operations/${id}`} />
-        </TabsContent>
-        <TabsContent value="company-portal" className="pt-4">
-          <CompanyPortalAccess id={id} companies={companies} />
-        </TabsContent>
-        <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
-          <div className="page-heading">
-            <div>
-              <h2>Inscripcions</h2>
-              <p className="text-sm text-muted-foreground">
-                Revisa les sol·licituds i decideix qui participa.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <NativeSelect
-                aria-label="Ordenar les inscripcions"
-                value={sort}
-                onChange={(e) => {
-                  setSort(e.target.value as ParticipantSort);
-                  setPage(0);
-                }}
-              >
-                {Object.entries(SORTS).map(([value, label]) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-              <NativeSelect
-                aria-label="Filtrar per estat"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(0);
-                }}
-              >
-                <NativeSelectOption value="">
-                  Tots els estats
-                </NativeSelectOption>
-                {Object.entries({
-                  ...STATUS_LABELS,
-                  ...CONFIRMATION_FILTERS,
-                }).map(([value, label]) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-              <NativeSelect
-                aria-label="Filtrar per centre d'estudis"
-                value={centerFilter}
-                onChange={(e) => {
-                  setCenterFilter(e.target.value);
-                  setPage(0);
-                }}
-              >
-                <NativeSelectOption value="">
-                  Tots els centres
-                </NativeSelectOption>
-                <NativeSelectOption value={NO_CENTER}>
-                  Sense centre
-                </NativeSelectOption>
-                {centers.map((center) => (
-                  <NativeSelectOption key={center.key} value={center.key}>
-                    {center.label} ({center.count})
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-              <Input
-                aria-label="Cercar participants"
-                placeholder="Cercar per nom, correu o àlies…"
-                className="sm:max-w-xs"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setPage(0);
-                }}
-              />
-              <Button
-                variant="outline"
-                disabled={!unconfirmed.length || busy}
-                onClick={resendUnconfirmed}
-              >
-                <Send data-icon="inline-start" />
-                Reenviar als no confirmats ({unconfirmed.length})
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!filtered.length}
-                onClick={exportCsv}
-              >
-                <Download data-icon="inline-start" />
-                CSV
-              </Button>
-            </div>
-          </div>
-          {selected.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded border p-3">
-              <span className="text-sm">
-                {selected.size}{" "}
-                {selected.size === 1 ? "seleccionat" : "seleccionats"}
-              </span>
-              <Button size="sm" disabled={busy} onClick={() => bulk("accept")}>
-                Acceptar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => bulk("reject")}
-              >
-                Rebutjar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setSelected(new Set())}
-              >
-                Treure la selecció
-              </Button>
-            </div>
-          )}
-          {filtered.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">
-                    <input
-                      type="checkbox"
-                      aria-label="Seleccionar tots els resultats filtrats"
-                      checked={
-                        filtered.length > 0 &&
-                        filtered.every((p) => selected.has(p.id))
-                      }
-                      onChange={(e) =>
-                        setSelected(
-                          e.target.checked
-                            ? new Set(filtered.map((p) => p.id))
-                            : new Set(),
-                        )
-                      }
-                    />
-                  </TableHead>
-                  <TableHead>Participant</TableHead>
-                  <TableHead>Correu electrònic</TableHead>
-                  <TableHead>Inscripció</TableHead>
-                  <TableHead>Universitat</TableHead>
-                  <TableHead>Estat</TableHead>
-                  <TableHead className="text-right">Accions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleParticipants.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        aria-label={`Seleccionar ${p.name}`}
-                        checked={selected.has(p.id)}
-                        onChange={(e) =>
-                          setSelected((current) => {
-                            const next = new Set(current);
-                            if (e.target.checked) next.add(p.id);
-                            else next.delete(p.id);
-                            return next;
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5">
-                        {p.name}
-                        {!!p.notes_count && (
-                          <span
-                            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
-                            title={`${p.notes_count} ${p.notes_count === 1 ? "nota interna" : "notes internes"}`}
-                          >
-                            <StickyNote className="h-3.5 w-3.5" />
-                            {p.notes_count}
-                          </span>
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell>{p.email}</TableCell>
-                    <TableCell>
-                      {p.registered_at
-                        ? dateLabel(serverDate(p.registered_at).toISOString())
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {p.detailsLoading ? (
-                        "Carregant…"
-                      ) : p.detailsError ? (
-                        <span title={p.detailsError}>No disponible</span>
-                      ) : (
-                        <span title={p.study_center?.trim() || undefined}>
-                          {studyCenter(p.study_center)?.label ?? "—"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          p.status === "accepted" ? "default" : "secondary"
-                        }
-                        className={cn(
-                          p.status === "rejected" &&
-                            "border-transparent bg-yellow-400 text-black",
-                        )}
-                      >
-                        {STATUS_LABELS[p.status] || "Desconegut"}
-                      </Badge>
-                      {p.status === "accepted" &&
-                        p.confirmed_assistance !== undefined && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "ml-1.5",
-                              p.confirmed_assistance &&
-                                "border-transparent bg-[var(--success)] text-black",
-                            )}
-                            title={
-                              p.confirmed_assistance
-                                ? "Ha confirmat l'assistència des del correu"
-                                : "Encara no ha confirmat l'assistència"
-                            }
-                          >
-                            {p.confirmed_assistance
-                              ? "Confirmat"
-                              : "Sense confirmar"}
-                          </Badge>
-                        )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDetail(p)}
-                        >
-                          Detalls
-                        </Button>
-                        {hasCv(p) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openCv(p.id)}
-                          >
-                            CV
-                          </Button>
-                        )}
-                        {p.status !== "accepted" && (
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              confirm(
-                                `Acceptar ${p.name}`,
-                                `/v1/event/${id}/accept/${p.id}`,
-                              )
-                            }
-                          >
-                            Acceptar
-                          </Button>
-                        )}
-                        {p.status === "accepted" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              confirm(
-                                `Retirar l'acceptació de ${p.name}`,
-                                `/v1/event/${id}/unaccept/${p.id}`,
-                              )
-                            }
-                          >
-                            Retirar l'acceptació
-                          </Button>
-                        )}
-                        {p.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              confirm(
-                                `Rebutjar ${p.name}`,
-                                `/v1/event/${id}/reject/${p.id}`,
-                              )
-                            }
-                          >
-                            Rebutjar
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setMailFor(p)}
-                          aria-label="Més accions"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <EmptyBox title="No hi ha inscripcions per mostrar">
-              Les sol·licituds dels participants apareixeran aquí.
-            </EmptyBox>
-          )}
-          {visibleParticipants.some((p) => p.detailsError) && (
-            <ErrorBox error="No s'han pogut carregar alguns CV o universitats. Torna a carregar l'esdeveniment per reintentar-ho." />
-          )}
-          <SearchPagination
-            page={currentPage}
-            total={filtered.length}
-            onChange={setPage}
-          />
-        </TabsContent>
-        <TabsContent value="audit" className="pt-4">
-          <AuditLogTab
-            eventId={id}
-            participants={participants}
-            version={auditVersion}
-          />
-        </TabsContent>
-        <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
-          <h2>Equips inscrits</h2>
-          <p className="text-sm text-muted-foreground">
-            El rebuig de l'equip només afecta els membres no acceptats. Per
-            canviar una acceptació, retira-la primer a Inscripcions.
-          </p>
-          {teams.length ? (
-            teams.map((g) => (
-              <Card key={g.id}>
-                <CardHeader>
-                  <CardTitle>{g.name}</CardTitle>
-                  <CardDescription>{g.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center justify-between gap-4">
-                  <p className="leading-relaxed">
-                    {g.members.length ? (
-                      g.members.map((m, i) => {
-                        const norm = (s?: string) =>
-                          (s || "").trim().replace(/\s+/g, " ").toLowerCase();
-                        const byIdentity = participants.find((p) =>
-                          m.id != null
-                            ? p.id === m.id
-                            : p.nickname === m.nickname,
-                        );
-                        const byName = participants.filter(
-                          (p) => norm(p.name) === norm(m.name),
-                        );
-                        const accepted =
-                          (
-                            byIdentity ||
-                            (byName.length === 1 ? byName[0] : undefined)
-                          )?.status === "accepted";
-                        return (
-                          <span key={m.id ?? m.nickname}>
-                            {i > 0 && ", "}
-                            <button
-                              type="button"
-                              className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${accepted ? "text-green-600" : "text-red-600"}`}
-                              title={accepted ? "Acceptat" : "No acceptat"}
-                              aria-label={`Veure la fitxa de ${m.name}`}
-                              onClick={() => setTeamMember(m)}
-                            >
-                              {m.name}
-                            </button>
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span>Sense membres</span>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() =>
-                        confirm(
-                          `Acceptar l'equip ${g.name}`,
-                          `/v1/event/${id}/acceptgroup/${g.id}`,
-                        )
-                      }
-                    >
-                      Acceptar l'equip
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        confirm(
-                          `Rebutjar l'equip ${g.name}`,
-                          `/v1/event/${id}/rejectgroup/${g.id}`,
-                        )
-                      }
-                    >
-                      Rebutjar pendents
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <EmptyBox title="Encara no hi ha equips" />
-          )}
-        </TabsContent>
-        <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
-          <h2>Patrocinadors de l'esdeveniment</h2>
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (companyId)
-                void action(`/v1/event/${id}/sponsors/${companyId}`).then(
-                  (saved) => {
-                    if (saved) setCompanyId("");
-                  },
-                );
-            }}
-          >
-            <Field className="w-auto">
-              <FieldLabel htmlFor="company-select">
-                Afegir una empresa existent
-              </FieldLabel>
-              <NativeSelect
-                id="company-select"
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                required
-              >
-                <NativeSelectOption value="">
-                  Selecciona una empresa
-                </NativeSelectOption>
-                {companies
-                  .filter((c) => !sponsors.some((s) => s.id === c.id))
-                  .map((c) => (
-                    <NativeSelectOption key={c.id} value={c.id}>
-                      {c.name}
+              <div className="page-heading">
+                <div className="flex flex-wrap gap-2">
+                  <NativeSelect
+                    aria-label="Ordenar les inscripcions"
+                    value={sort}
+                    onChange={(e) => {
+                      setSort(e.target.value as ParticipantSort);
+                      setPage(0);
+                    }}
+                  >
+                    {Object.entries(SORTS).map(([value, label]) => (
+                      <NativeSelectOption key={value} value={value}>
+                        {label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <NativeSelect
+                    aria-label="Filtrar per estat"
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setPage(0);
+                    }}
+                  >
+                    <NativeSelectOption value="">
+                      Tots els estats
                     </NativeSelectOption>
-                  ))}
-              </NativeSelect>
-            </Field>
-            <Button disabled={busy || !companyId}>Vincular patrocinador</Button>
-          </form>
-          <p className="text-sm text-muted-foreground">
-            Pots crear empreses noves a la secció Empreses del menú.
-          </p>
-          {sponsors.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Nivell</TableHead>
-                  <TableHead>Ordre</TableHead>
-                  <TableHead>Accions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sponsors.map((c, index) => (
-                  <TableRow key={c.id}>
-                    <TableCell>{c.name}</TableCell>
-                    <TableCell>
-                      <NativeSelect
-                        aria-label={`Nivell de ${c.name}`}
-                        value={String(c.tier ?? 0)}
-                        disabled={busy}
-                        onChange={(e) =>
-                          void action(
-                            `/v1/event/${id}/sponsors/${c.id}`,
-                            "PATCH",
-                            {
-                              tier: Number(e.target.value),
-                              display_order: index,
-                            },
-                          )
-                        }
-                      >
-                        {TIERS.map((t) => (
-                          <NativeSelectOption
-                            key={t.value}
-                            value={String(t.value)}
+                    {Object.entries({
+                      ...STATUS_LABELS,
+                      ...CONFIRMATION_FILTERS,
+                    }).map(([value, label]) => (
+                      <NativeSelectOption key={value} value={value}>
+                        {label}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <NativeSelect
+                    aria-label="Filtrar per centre d'estudis"
+                    value={centerFilter}
+                    onChange={(e) => {
+                      setCenterFilter(e.target.value);
+                      setPage(0);
+                    }}
+                  >
+                    <NativeSelectOption value="">
+                      Tots els centres
+                    </NativeSelectOption>
+                    <NativeSelectOption value={NO_CENTER}>
+                      Sense centre
+                    </NativeSelectOption>
+                    {centers.map((center) => (
+                      <NativeSelectOption key={center.key} value={center.key}>
+                        {center.label} ({center.count})
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <Input
+                    aria-label="Cercar participants"
+                    placeholder="Cercar per nom, correu o àlies…"
+                    className="sm:max-w-xs"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setPage(0);
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!unconfirmed.length || busy}
+                    onClick={resendUnconfirmed}
+                  >
+                    <Send data-icon="inline-start" />
+                    Reenviar als no confirmats ({unconfirmed.length})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!filtered.length}
+                    onClick={exportCsv}
+                  >
+                    <Download data-icon="inline-start" />
+                    CSV
+                  </Button>
+                </div>
+              </div>
+              {selected.size > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded border p-3">
+                  <span className="text-sm">
+                    {selected.size}{" "}
+                    {selected.size === 1 ? "seleccionat" : "seleccionats"}
+                  </span>
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => bulk("accept")}
+                  >
+                    Acceptar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => bulk("reject")}
+                  >
+                    Rebutjar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Treure la selecció
+                  </Button>
+                </div>
+              )}
+              {filtered.length ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8">
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar tots els resultats filtrats"
+                          checked={
+                            filtered.length > 0 &&
+                            filtered.every((p) => selected.has(p.id))
+                          }
+                          onChange={(e) =>
+                            setSelected(
+                              e.target.checked
+                                ? new Set(filtered.map((p) => p.id))
+                                : new Set(),
+                            )
+                          }
+                        />
+                      </TableHead>
+                      <TableHead>Participant</TableHead>
+                      <TableHead>Correu electrònic</TableHead>
+                      <TableHead>Inscripció</TableHead>
+                      <TableHead>Universitat</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead className="text-right">Accions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleParticipants.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleccionar ${p.name}`}
+                            checked={selected.has(p.id)}
+                            onChange={(e) =>
+                              setSelected((current) => {
+                                const next = new Set(current);
+                                if (e.target.checked) next.add(p.id);
+                                else next.delete(p.id);
+                                return next;
+                              })
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5">
+                            {p.name}
+                            {!!p.notes_count && (
+                              <span
+                                className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
+                                title={`${p.notes_count} ${p.notes_count === 1 ? "nota interna" : "notes internes"}`}
+                              >
+                                <StickyNote className="h-3.5 w-3.5" />
+                                {p.notes_count}
+                              </span>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell>{p.email}</TableCell>
+                        <TableCell>
+                          {p.registered_at
+                            ? dateLabel(
+                                serverDate(p.registered_at).toISOString(),
+                              )
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {p.detailsLoading ? (
+                            "Carregant…"
+                          ) : p.detailsError ? (
+                            <span title={p.detailsError}>No disponible</span>
+                          ) : (
+                            <span title={p.study_center?.trim() || undefined}>
+                              {studyCenter(p.study_center)?.label ?? "—"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              p.status === "accepted" ? "default" : "secondary"
+                            }
+                            className={cn(
+                              p.status === "rejected" &&
+                                "border-transparent bg-yellow-400 text-black",
+                            )}
                           >
-                            {t.label}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelect>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        key={`order-${c.id}-${index}`}
-                        type="number"
-                        min={0}
-                        className="w-20"
-                        aria-label={`Ordre de ${c.name}`}
-                        defaultValue={index}
-                        disabled={busy}
-                        onBlur={(e) => {
-                          const order = Number(e.target.value);
-                          if (order !== index)
-                            void action(
-                              `/v1/event/${id}/sponsors/${c.id}`,
-                              "PATCH",
-                              { tier: c.tier ?? 0, display_order: order },
+                            {STATUS_LABELS[p.status] || "Desconegut"}
+                          </Badge>
+                          {p.status === "accepted" &&
+                            p.confirmed_assistance !== undefined && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "ml-1.5",
+                                  p.confirmed_assistance &&
+                                    "border-transparent bg-[var(--success)] text-black",
+                                )}
+                                title={
+                                  p.confirmed_assistance
+                                    ? "Ha confirmat l'assistència des del correu"
+                                    : "Encara no ha confirmat l'assistència"
+                                }
+                              >
+                                {p.confirmed_assistance
+                                  ? "Confirmat"
+                                  : "Sense confirmar"}
+                              </Badge>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDetail(p)}
+                            >
+                              Detalls
+                            </Button>
+                            {hasCv(p) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openCv(p.id)}
+                              >
+                                CV
+                              </Button>
+                            )}
+                            {p.status !== "accepted" && (
+                              <Button
+                                size="sm"
+                                disabled={busy}
+                                onClick={() =>
+                                  confirm(
+                                    `Acceptar ${p.name}`,
+                                    `/v1/event/${id}/accept/${p.id}`,
+                                  )
+                                }
+                              >
+                                Acceptar
+                              </Button>
+                            )}
+                            {p.status === "accepted" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  confirm(
+                                    `Retirar l'acceptació de ${p.name}`,
+                                    `/v1/event/${id}/unaccept/${p.id}`,
+                                  )
+                                }
+                              >
+                                Retirar l'acceptació
+                              </Button>
+                            )}
+                            {p.status === "pending" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  confirm(
+                                    `Rebutjar ${p.name}`,
+                                    `/v1/event/${id}/reject/${p.id}`,
+                                  )
+                                }
+                              >
+                                Rebutjar
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMailFor(p)}
+                              aria-label="Més accions"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyBox title="No hi ha inscripcions per mostrar">
+                  Les sol·licituds dels participants apareixeran aquí.
+                </EmptyBox>
+              )}
+              {visibleParticipants.some((p) => p.detailsError) && (
+                <ErrorBox error="No s'han pogut carregar alguns CV o universitats. Torna a carregar l'esdeveniment per reintentar-ho." />
+              )}
+              <SearchPagination
+                page={currentPage}
+                total={filtered.length}
+                onChange={setPage}
+              />
+            </TabsContent>
+            <TabsContent value="audit" className="flex flex-col gap-8 pt-4">
+              <AuditLogTab
+                eventId={id}
+                participants={participants}
+                version={auditVersion}
+              />
+              <EventOperations id={id} section="audit" />
+            </TabsContent>
+            <TabsContent value="judging" className="flex flex-col gap-8 pt-4">
+              <EventOperations id={id} section="rooms" />
+              <EventOperations id={id} section="judging" />
+            </TabsContent>
+            <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                El rebuig de l'equip només afecta els membres no acceptats. Per
+                canviar una acceptació, retira-la primer a Inscripcions.
+              </p>
+              {teams.length ? (
+                teams.map((g) => (
+                  <Card key={g.id}>
+                    <CardHeader>
+                      <CardTitle>{g.name}</CardTitle>
+                      <CardDescription>{g.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap items-center justify-between gap-4">
+                      <p className="leading-relaxed">
+                        {g.members.length ? (
+                          g.members.map((m, i) => {
+                            const norm = (s?: string) =>
+                              (s || "")
+                                .trim()
+                                .replace(/\s+/g, " ")
+                                .toLowerCase();
+                            const byIdentity = participants.find((p) =>
+                              m.id != null
+                                ? p.id === m.id
+                                : p.nickname === m.nickname,
                             );
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {critical && (
+                            const byName = participants.filter(
+                              (p) => norm(p.name) === norm(m.name),
+                            );
+                            const accepted =
+                              (
+                                byIdentity ||
+                                (byName.length === 1 ? byName[0] : undefined)
+                              )?.status === "accepted";
+                            return (
+                              <span key={m.id ?? m.nickname}>
+                                {i > 0 && ", "}
+                                <button
+                                  type="button"
+                                  className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${accepted ? "text-green-600" : "text-red-600"}`}
+                                  title={accepted ? "Acceptat" : "No acceptat"}
+                                  aria-label={`Veure la fitxa de ${m.name}`}
+                                  onClick={() => setTeamMember(m)}
+                                >
+                                  {m.name}
+                                </button>
+                              </span>
+                            );
+                          })
+                        ) : (
+                          <span>Sense membres</span>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
                         <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() =>
                             confirm(
-                              `Desvincular ${c.name}`,
-                              `/v1/event/${id}/sponsors/${c.id}`,
-                              "DELETE",
+                              `Acceptar l'equip ${g.name}`,
+                              `/v1/event/${id}/acceptgroup/${g.id}`,
                             )
                           }
                         >
-                          Desvincular
+                          Acceptar l'equip
                         </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <EmptyBox title="Sense patrocinadors vinculats" />
-          )}
-        </TabsContent>
-        <TabsContent value="meals" className="flex flex-col gap-4 pt-4">
-          <div className="page-heading">
-            <h2>Àpats</h2>
-            <Button onClick={() => setMealEditor("new")}>
-              <Plus data-icon="inline-start" />
-              Crear àpat
-            </Button>
-          </div>
-          {meals.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Descripció</TableHead>
-                  <TableHead>Accions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {meals.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell>{m.name}</TableCell>
-                    <TableCell>{m.description}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
-                          size="sm"
-                          onClick={() => setMealEditor(m)}
+                          onClick={() =>
+                            confirm(
+                              `Rebutjar l'equip ${g.name}`,
+                              `/v1/event/${id}/rejectgroup/${g.id}`,
+                            )
+                          }
                         >
-                          Editar
+                          Rebutjar pendents
                         </Button>
-                        {critical && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              confirm(
-                                `Eliminar ${m.name}`,
-                                `/v1/meal/${m.id}`,
-                                "DELETE",
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <EmptyBox title="Encara no hi ha equips" />
+              )}
+            </TabsContent>
+            <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
+              <form
+                className="flex flex-wrap items-end gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (companyId)
+                    void action(`/v1/event/${id}/sponsors/${companyId}`).then(
+                      (saved) => {
+                        if (saved) setCompanyId("");
+                      },
+                    );
+                }}
+              >
+                <Field className="w-auto">
+                  <FieldLabel htmlFor="company-select">
+                    Afegir una empresa existent
+                  </FieldLabel>
+                  <NativeSelect
+                    id="company-select"
+                    value={companyId}
+                    onChange={(e) => setCompanyId(e.target.value)}
+                    required
+                  >
+                    <NativeSelectOption value="">
+                      Selecciona una empresa
+                    </NativeSelectOption>
+                    {companies
+                      .filter((c) => !sponsors.some((s) => s.id === c.id))
+                      .map((c) => (
+                        <NativeSelectOption key={c.id} value={c.id}>
+                          {c.name}
+                        </NativeSelectOption>
+                      ))}
+                  </NativeSelect>
+                </Field>
+                <Button disabled={busy || !companyId}>
+                  Vincular patrocinador
+                </Button>
+              </form>
+              <p className="text-sm text-muted-foreground">
+                Pots crear empreses noves a la secció Empreses del menú.
+              </p>
+              {sponsors.length ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>Nivell</TableHead>
+                      <TableHead>Ordre</TableHead>
+                      <TableHead>Accions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sponsors.map((c, index) => (
+                      <TableRow key={c.id}>
+                        <TableCell>{c.name}</TableCell>
+                        <TableCell>
+                          <NativeSelect
+                            aria-label={`Nivell de ${c.name}`}
+                            value={String(c.tier ?? 0)}
+                            disabled={busy}
+                            onChange={(e) =>
+                              void action(
+                                `/v1/event/${id}/sponsors/${c.id}`,
+                                "PATCH",
+                                {
+                                  tier: Number(e.target.value),
+                                  display_order: index,
+                                },
                               )
                             }
                           >
-                            Eliminar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <EmptyBox title="Planifica els àpats d'aquesta edició" />
-          )}
-          <MealCheckIn meals={meals} />
-          <EventOperations
-            key={meals.map((meal) => `${meal.id}-${meal.name}`).join(",")}
-            id={id}
-            section="meals"
-          />
-        </TabsContent>
-        <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
-          <VouchersCard id={id} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Registrar l'arribada</CardTitle>
-              <CardDescription>
-                Introdueix el codi d'un participant acceptat per registrar-ne
-                l'assistència.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                className="flex flex-col gap-4 sm:max-w-md"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void action(
-                    `/v1/event/${id}/participate/${encodeURIComponent(code)}`,
-                  );
-                }}
-              >
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="checkin-code">
-                      Codi del participant
-                    </FieldLabel>
-                    <Input
-                      id="checkin-code"
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      required
-                    />
-                  </Field>
-                </FieldGroup>
-                <Button disabled={busy || !code.trim()}>
-                  Registrar l'arribada
+                            {TIERS.map((t) => (
+                              <NativeSelectOption
+                                key={t.value}
+                                value={String(t.value)}
+                              >
+                                {t.label}
+                              </NativeSelectOption>
+                            ))}
+                          </NativeSelect>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            key={`order-${c.id}-${index}`}
+                            type="number"
+                            min={0}
+                            className="w-20"
+                            aria-label={`Ordre de ${c.name}`}
+                            defaultValue={index}
+                            disabled={busy}
+                            onBlur={(e) => {
+                              const order = Number(e.target.value);
+                              if (order !== index)
+                                void action(
+                                  `/v1/event/${id}/sponsors/${c.id}`,
+                                  "PATCH",
+                                  { tier: c.tier ?? 0, display_order: order },
+                                );
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {critical && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                confirm(
+                                  `Desvincular ${c.name}`,
+                                  `/v1/event/${id}/sponsors/${c.id}`,
+                                  "DELETE",
+                                )
+                              }
+                            >
+                              Desvincular
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyBox title="Sense patrocinadors vinculats" />
+              )}
+            </TabsContent>
+            <TabsContent value="meals" className="flex flex-col gap-6 pt-4">
+              <MealCheckIn key={meals.length} meals={meals} />
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold">Àpats de l’edició</h3>
+                <Button onClick={() => setMealEditor("new")}>
+                  <Plus data-icon="inline-start" />
+                  Crear àpat
                 </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
-          <h2>Comunicacions</h2>
-          <p className="text-sm text-muted-foreground">
-            Exporta correus i envia comunicacions als participants d&apos;aquest
-            esdeveniment.
-          </p>
-          <TicketsCard id={id} />
-          <AcceptedMailsCard id={id} />
-          <MailActions id={id} />
-        </TabsContent>
-        <TabsContent value="status" className="pt-4">
-          <EventCommandCenter id={id} />
-        </TabsContent>
-        <TabsContent value="statistics" className="pt-4">
-          <StatisticsTab id={id} />
-        </TabsContent>
-        <TabsContent value="logistics" className="pt-4">
-          <LogisticsTab id={id} />
-        </TabsContent>
-        {standaloneOperations.map((item) => (
-          <TabsContent key={item.value} value={item.value} className="pt-4">
-            <EventOperations id={id} section={item.section} />
-          </TabsContent>
-        ))}
-        <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sobre aquesta edició</CardTitle>
-              <CardDescription>
-                {event.description || "Sense descripció"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <dt className="text-sm text-muted-foreground">
-                    Persones per equip
-                  </dt>
-                  <dd>{event.max_group_size}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">
-                    Màxim de patrocinadors
-                  </dt>
-                  <dd>{event.max_sponsors}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-muted-foreground">Preu (API)</dt>
-                  <dd>{event.price}</dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-          {critical && (
-            <Button
-              variant="destructive"
-              className="self-start"
-              onClick={() =>
-                setConfirmation({
-                  title: `Eliminar ${event.name}`,
-                  description:
-                    "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
-                  run: async () => {
-                    await request(`/v1/event/${id}`, "DELETE");
-                    await reloadEvents();
-                    onBack();
-                  },
-                })
-              }
-            >
-              Eliminar l'esdeveniment
-            </Button>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+              {meals.length ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Descripció</TableHead>
+                      <TableHead>Accions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {meals.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell>{m.name}</TableCell>
+                        <TableCell>{m.description}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setMealEditor(m)}
+                            >
+                              Editar
+                            </Button>
+                            {critical && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  confirm(
+                                    `Eliminar ${m.name}`,
+                                    `/v1/meal/${m.id}`,
+                                    "DELETE",
+                                  )
+                                }
+                              >
+                                Eliminar
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <EmptyBox title="Planifica els àpats d'aquesta edició" />
+              )}
+              <EventOperations
+                key={meals.map((meal) => `${meal.id}-${meal.name}`).join(",")}
+                id={id}
+                section="meals"
+              />
+            </TabsContent>
+            <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Registrar una arribada</CardTitle>
+                  <CardDescription>
+                    Escaneja o escriu el codi del participant.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    className="flex flex-col gap-4 sm:max-w-md"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void action(
+                        `/v1/event/${id}/participate/${encodeURIComponent(code.trim())}`,
+                      ).then((ok) => {
+                        if (ok) setCode("");
+                        document.getElementById("checkin-code")?.focus();
+                      });
+                    }}
+                  >
+                    <FieldGroup>
+                      <Field>
+                        <FieldLabel htmlFor="checkin-code">Codi</FieldLabel>
+                        <Input
+                          id="checkin-code"
+                          autoFocus
+                          autoComplete="off"
+                          className="h-12 text-lg sm:h-9 sm:text-base"
+                          value={code}
+                          onChange={(e) => setCode(e.target.value)}
+                          required
+                        />
+                      </Field>
+                    </FieldGroup>
+                    <Button
+                      className="h-12 sm:h-9"
+                      disabled={busy || !code.trim()}
+                    >
+                      Registrar
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+              <VouchersCard id={id} />
+              <TicketsCard id={id} />
+            </TabsContent>
+            <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
+              <AcceptedMailsCard id={id} />
+              <MailActions id={id} />
+            </TabsContent>
+            <TabsContent value="status" className="pt-4">
+              <EventCommandCenter id={id} />
+            </TabsContent>
+            <TabsContent value="statistics" className="pt-4">
+              <StatisticsTab id={id} />
+            </TabsContent>
+            <TabsContent value="logistics" className="pt-4">
+              <LogisticsTab id={id} />
+            </TabsContent>
+            {standaloneOperations.map((item) => (
+              <TabsContent key={item.value} value={item.value} className="pt-4">
+                <EventOperations id={id} section={item.section} />
+              </TabsContent>
+            ))}
+            <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sobre aquesta edició</CardTitle>
+                  <CardDescription>
+                    {event.description || "Sense descripció"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <dt className="text-sm text-muted-foreground">
+                        Persones per equip
+                      </dt>
+                      <dd>{event.max_group_size}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">
+                        Màxim de patrocinadors
+                      </dt>
+                      <dd>{event.max_sponsors}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">
+                        Preu (API)
+                      </dt>
+                      <dd>{event.price}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+              {critical && (
+                <Button
+                  variant="destructive"
+                  className="self-start"
+                  onClick={() =>
+                    setConfirmation({
+                      title: `Eliminar ${event.name}`,
+                      description:
+                        "S'eliminarà l'esdeveniment. Aquesta acció no es pot desfer i pot fallar si té dades associades.",
+                      run: async () => {
+                        await request(`/v1/event/${id}`, "DELETE");
+                        await reloadEvents();
+                        onBack();
+                      },
+                    })
+                  }
+                >
+                  Eliminar l'esdeveniment
+                </Button>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
       {editing && (
         <EventEditor
           event={event}

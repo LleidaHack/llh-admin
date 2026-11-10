@@ -81,11 +81,10 @@ export function TicketsCard({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tiquets de check-in</CardTitle>
+        <CardTitle>Tiquets d’entrada</CardTitle>
         <CardDescription>
-          Un cop tancades les inscripcions, genera els tiquets: cada participant
-          acceptat i confirmat rep un correu amb el seu QR, que també veu al seu
-          perfil. El dia de l&apos;esdeveniment s&apos;escaneja al check-in.
+          Genera’ls amb les inscripcions tancades. Cada participant confirmat
+          rep el seu QR per correu.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -271,12 +270,10 @@ export function VouchersCard({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vouchers (acreditacions físiques)</CardTitle>
+        <CardTitle>Acreditacions (vouchers)</CardTitle>
         <CardDescription>
-          Genera els codis QR que s&apos;imprimiran a les acreditacions. Al
-          check-in, l&apos;app de lectura escaneja el tiquet del participant i
-          després un voucher en blanc per vincular-los. Durant
-          l&apos;esdeveniment els àpats es llegeixen amb el voucher.
+          QR per imprimir. A l’entrada es vincula cada tiquet amb un voucher, i
+          als àpats s’escaneja el voucher.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

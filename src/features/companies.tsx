@@ -51,28 +51,23 @@ export function Companies() {
   );
   return (
     <div className="flex flex-col gap-6">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">COL·LABORADORS</p>
-          <h1>Empreses</h1>
-          <p className="text-muted-foreground">
-            Gestiona les empreses i vincula-les a cada edició des del seu
-            esdeveniment.
-          </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1>Empreses</h1>
+        <div className="flex gap-2">
+          <Input
+            aria-label="Cercar empreses"
+            placeholder="Cercar…"
+            className="sm:w-64"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <Button onClick={() => setEdit("new")}>
+            <Plus data-icon="inline-start" />
+            Crear
+          </Button>
         </div>
-        <Button onClick={() => setEdit("new")}>
-          <Plus data-icon="inline-start" />
-          Crear empresa
-        </Button>
       </div>
       <ErrorBox error={error} />
-      <Input
-        aria-label="Cercar empreses"
-        placeholder="Cercar empresa…"
-        className="sm:max-w-xs"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
       {loading ? (
         <Loading />
       ) : filtered.length ? (

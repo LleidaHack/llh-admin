@@ -78,10 +78,7 @@ export function UserAccessRole({
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <Button
-        disabled={
-          busy ||
-          (viewer.id === userId && role !== "superadmin")
-        }
+        disabled={busy || (viewer.id === userId && role !== "superadmin")}
         onClick={async () => {
           if (!window.confirm(`Assignar el rol ${role} a aquest usuari?`))
             return;
