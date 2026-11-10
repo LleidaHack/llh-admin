@@ -11,6 +11,7 @@ import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Pencil,
@@ -264,6 +265,10 @@ export function EventDetail({
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarSlot, setSidebarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setSidebarSlot(document.getElementById("sidebar-slot"));
+  }, []);
   useEffect(() => {
     setActiveSection(sectionFromUrl());
     const onPop = () => setActiveSection(sectionFromUrl());
@@ -594,7 +599,8 @@ export function EventDetail({
     </div>
   );
   const sectionNav = (
-    <nav
+    <div
+      role="navigation"
       aria-label="Seccions de l’esdeveniment"
       className="flex flex-col gap-4"
     >
@@ -610,8 +616,9 @@ export function EventDetail({
               onClick={() => selectSection(key)}
               aria-current={key === activeSection ? "page" : undefined}
               className={cn(
-                "flex min-h-10 items-center justify-between rounded-md px-3 text-left text-sm transition-colors hover:bg-muted",
-                key === activeSection && "bg-muted font-semibold",
+                "flex min-h-9 items-center justify-between rounded-md px-3 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                key === activeSection &&
+                  "bg-secondary font-semibold text-secondary-foreground hover:bg-secondary hover:text-secondary-foreground",
               )}
             >
               {label}
@@ -624,12 +631,12 @@ export function EventDetail({
           ))}
         </div>
       ))}
-    </nav>
+    </div>
   );
   return (
     <div className="flex flex-col gap-5">
       <ErrorBox error={error} />
-      <div className="sticky top-0 z-30 -mx-4 border-b bg-background px-4 py-2 md:hidden">
+      <div className="event-mobile-bar sticky top-0 z-30 -mx-4 border-b bg-background px-4 py-2 md:hidden">
         <Button
           variant="outline"
           className="w-full justify-between"
@@ -652,13 +659,15 @@ export function EventDetail({
           {sectionNav}
         </DialogContent>
       </Dialog>
-      <div className="md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
-        <aside className="hidden md:block">
-          <div className="sticky top-4 flex flex-col gap-5">
+      {sidebarSlot &&
+        createPortal(
+          <div className="flex flex-col gap-5">
             {eventTitle}
             {sectionNav}
-          </div>
-        </aside>
+          </div>,
+          sidebarSlot,
+        )}
+      <div>
         <div className="min-w-0">
           <h2 className="mb-1 text-xl font-semibold">
             {sectionLabels[activeSection]}

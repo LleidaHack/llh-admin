@@ -151,6 +151,7 @@ export default function PanelLayout({
             );
           })}
         </nav>
+        <div id="sidebar-slot" className="sidebar-slot" />
       </aside>
       <div className="workspace">
         <header className="topbar">
