@@ -555,7 +555,12 @@ export function EventDetail({
         onValueChange={selectSection}
         className="pb-24 md:pb-0"
       >
-        <div className="sticky top-0 z-20 bg-background py-3 md:hidden">
+        <div
+          className={cn(
+            "sticky top-0 z-20 bg-background py-3 md:hidden",
+            activeGroup.items.length < 2 && "hidden",
+          )}
+        >
           <label className="text-sm font-medium">
             {activeGroup.label}
             <NativeSelect
@@ -619,7 +624,10 @@ export function EventDetail({
         </nav>
         <TabsList
           aria-label={activeGroup.label}
-          className="mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex"
+          className={cn(
+            "mt-2 hidden h-auto max-w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:flex",
+            activeGroup.items.length < 2 && "md:hidden",
+          )}
         >
           {activeGroup.items.map(([value, label]) => (
             <TabsTrigger
