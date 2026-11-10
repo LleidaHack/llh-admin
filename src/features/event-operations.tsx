@@ -1,4 +1,6 @@
 "use client";
+import { CsvImport } from "@/components/csv-import";
+import { importChallenges } from "@/lib/csv-import";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { setUnsavedChanges } from "@/lib/unsaved";
@@ -21,6 +23,7 @@ const labels: Record<string, string> = {
   location: "Ubicació",
   points: "LleidaCoins",
   question: "Pregunta",
+  company: "Empresa",
   answer: "Resposta",
   cost: "Cost",
   stock: "Unitats disponibles",
@@ -30,6 +33,7 @@ const labels: Record<string, string> = {
 };
 const templates: Record<string, Item> = {
   challenges: {
+    company: "",
     id: "",
     title: "",
     description: "",
@@ -37,6 +41,7 @@ const templates: Record<string, Item> = {
     resources: [],
   },
   decoy_challenges: {
+    company: "",
     id: "",
     title: "",
     description: "",
@@ -500,6 +505,39 @@ export function EventOperations({
                   </CardHeader>
                 )}
                 <CardContent className="space-y-4">
+                  {["challenges", "decoy_challenges"].includes(key) && (
+                    <CsvImport
+                      label="Importar reptes des de CSV"
+                      disabled={busy}
+                      template={[
+                        ["id", "company", "title", "description", "published"],
+                        [
+                          "rodi-demo",
+                          "Rodi",
+                          "El teu vehicle, sempre a punt",
+                          "Repte fictici de mostra: crea un pla de manteniment personalitzat.",
+                          "false",
+                        ],
+                      ]}
+                      validate={(rows) => {
+                        importChallenges(
+                          rows,
+                          (draft[key] || []).map((item: Item) => item.id),
+                        );
+                      }}
+                      onImport={async (rows, progress) => {
+                        const imported = importChallenges(
+                          rows,
+                          (draft[key] || []).map((item: Item) => item.id),
+                        );
+                        update(key, [...(draft[key] || []), ...imported]);
+                        progress(imported.length);
+                        setNotice(
+                          "Reptes afegits al borrador. Desa els canvis per aplicar-los.",
+                        );
+                      }}
+                    />
+                  )}
                   {(draft[key] || []).map((item: Item, index: number) => (
                     <div
                       className="grid gap-3 rounded border p-4 md:grid-cols-2"
@@ -531,6 +569,7 @@ export function EventOperations({
                                   ["points", "cost", "stock"].includes(field)
                                 }
                                 required={
+                                  field !== "company" &&
                                   field !== "description" &&
                                   field !== "location"
                                 }

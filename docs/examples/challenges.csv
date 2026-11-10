@@ -1,0 +1,6 @@
+id,company,title,description,published
+rodi-demo,Rodi,"El teu vehicle, sempre a punt","Repte fictici de mostra: crea una aplicació que recomani revisions segons el quilometratge i els hàbits de conducció.",false
+vall-companys-demo,Vall Companys,Menys malbaratament alimentari,"Repte fictici de mostra: detecta excedents a partir de producció, estoc i demanda simulats i proposa com aprofitar-los.",false
+openfort-demo,Openfort,Recompenses digitals sense complicacions,Repte fictici de mostra: permet completar missions i obtenir recompenses digitals en un entorn de proves sense haver d'entendre wallets.,false
+jetbrains-demo,JetBrains,Entén qualsevol repositori,Repte fictici de mostra: crea un assistent que expliqui un repositori i indiqui per on començar una modificació.,false
+paeria-demo,La Paeria,Una Lleida més accessible,Repte fictici de mostra: identifica barreres urbanes amb dades simulades i proposa itineraris accessibles.,false

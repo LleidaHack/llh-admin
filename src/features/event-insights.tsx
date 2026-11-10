@@ -211,7 +211,9 @@ export function StatisticsTab({ id }: { id: number }) {
 
 export function LogisticsTab({ id }: { id: number }) {
   const sizes = useResource<unknown>(`/v1/event/${id}/get_sizes`);
-  const food = useResource<unknown>(`/v1/event/${id}/food_restrictions`);
+  const food = useResource<StatisticsParticipant[]>(
+    `/v1/event/${id}/statistics_participants`,
+  );
   return (
     <div className="flex flex-col gap-5">
       <Section
@@ -235,7 +237,7 @@ export function LogisticsTab({ id }: { id: number }) {
         {food.data === undefined ? (
           <EmptyBox title="Sense restriccions registrades" />
         ) : (
-          <DataView data={food.data} />
+          <StatisticsGroups participants={food.data} onlyDietary />
         )}
       </Section>
     </div>

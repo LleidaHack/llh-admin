@@ -70,11 +70,25 @@ import { dietaryWarning } from "./dietary";
 
 it("keeps dietary participants attached to each count and preserves original answers", () => {
   const people = [
-    { id: 1, name: "First", food_restrictions: "Lactosa" },
-    { id: 2, name: "Second", food_restrictions: " lactosa " },
-    { id: 3, food_restrictions: null },
-    { id: 4, food_restrictions: "No" },
-    { id: 5, food_restrictions: "Gluten i lactosa" },
+    {
+      id: 1,
+      name: "First",
+      confirmed_assistance: true,
+      food_restrictions: "Lactosa",
+    },
+    {
+      id: 2,
+      name: "Second",
+      confirmed_assistance: true,
+      food_restrictions: " lactosa ",
+    },
+    { id: 3, confirmed_assistance: true, food_restrictions: null },
+    { id: 4, confirmed_assistance: true, food_restrictions: "No" },
+    {
+      id: 5,
+      confirmed_assistance: true,
+      food_restrictions: "Gluten i lactosa",
+    },
   ];
   const category = participantStatistics([...people, people[0]])[0];
   expect(category.field).toBe("food_restrictions");
@@ -96,4 +110,21 @@ it("only suppresses explicit negative dietary answers", () => {
     "No puc prendre lactosa",
   );
   expect(dietaryWarning("Gluten, fruits secs")).toBe("Gluten, fruits secs");
+});
+
+it("excludes unconfirmed people only from catering statistics", () => {
+  const categories = participantStatistics([
+    { id: 1, confirmed_assistance: true, food_restrictions: "Gluten" },
+    { id: 2, confirmed_assistance: false, food_restrictions: "Lactosa" },
+    { id: 3, food_restrictions: "Fruits secs" },
+  ]);
+  expect(
+    categories
+      .find((c) => c.field === "food_restrictions")
+      ?.groups.flatMap((g) => g.participants)
+      .map((p) => p.id),
+  ).toEqual([1]);
+  expect(
+    categories.find((c) => c.field === "location")?.groups[0].participants,
+  ).toHaveLength(3);
 });
