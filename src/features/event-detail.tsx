@@ -575,6 +575,24 @@ export function EventDetail({
       : key === "teams"
         ? teams.length
         : undefined;
+  const eventTitle = (
+    <div className="min-w-0 px-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-3" />
+        Esdeveniments
+      </button>
+      <p className="truncate font-semibold">{event.name}</p>
+      <p className="text-xs text-muted-foreground">
+        {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"} ·{" "}
+        {participants.length}/{event.max_participants} inscrits
+        {confirmedCount > 0 && ` · ${confirmedCount} confirmats`}
+      </p>
+    </div>
+  );
   const sectionNav = (
     <nav
       aria-label="Seccions de l’esdeveniment"
@@ -610,59 +628,6 @@ export function EventDetail({
   );
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <button
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Esdeveniments
-          </button>
-          <h1 className="truncate">{event.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {event.location} · {dateLabel(event.start_date)} —{" "}
-            {dateLabel(event.end_date)}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant={event.is_open ? "default" : "secondary"}>
-              {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"}
-            </Badge>
-            <span className="text-muted-foreground">
-              {participants.length}/{event.max_participants} inscrits
-              {participants.some((p) => p.confirmed_assistance !== undefined) &&
-                ` · ${confirmedCount} confirmats`}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              void load();
-              void loadCompanies();
-            }}
-            aria-label="Actualitzar"
-            title="Actualitzar"
-          >
-            <RefreshCw />
-          </Button>
-          <Button variant="outline" onClick={() => setEditing(true)}>
-            <Pencil data-icon="inline-start" />
-            Editar
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              void action(`/v1/event/${id}`, "PUT", { is_open: !event.is_open })
-            }
-          >
-            {event.is_open ? "Tancar inscripcions" : "Obrir inscripcions"}
-          </Button>
-        </div>
-      </div>
       <ErrorBox error={error} />
       <div className="sticky top-0 z-30 -mx-4 border-b bg-background px-4 py-2 md:hidden">
         <Button
@@ -671,21 +636,28 @@ export function EventDetail({
           onClick={() => setNavOpen(true)}
           aria-haspopup="dialog"
         >
-          <span className="truncate">{sectionLabels[activeSection]}</span>
+          <span className="truncate">
+            <span className="text-muted-foreground">{event.name} · </span>
+            {sectionLabels[activeSection]}
+          </span>
           <MoreHorizontal />
         </Button>
       </div>
       <Dialog open={navOpen} onOpenChange={setNavOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Seccions</DialogTitle>
+            <DialogTitle className="sr-only">Seccions</DialogTitle>
           </DialogHeader>
+          {eventTitle}
           {sectionNav}
         </DialogContent>
       </Dialog>
       <div className="md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
         <aside className="hidden md:block">
-          <div className="sticky top-4">{sectionNav}</div>
+          <div className="sticky top-4 flex flex-col gap-5">
+            {eventTitle}
+            {sectionNav}
+          </div>
         </aside>
         <div className="min-w-0">
           <h2 className="mb-1 text-xl font-semibold">
@@ -1367,6 +1339,33 @@ export function EventDetail({
               </TabsContent>
             ))}
             <TabsContent value="settings" className="flex flex-col gap-5 pt-4">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setEditing(true)}>
+                  <Pencil data-icon="inline-start" />
+                  Editar l’esdeveniment
+                </Button>
+                <Button
+                  variant={event.is_open ? "outline" : "default"}
+                  disabled={busy}
+                  onClick={() =>
+                    void action(`/v1/event/${id}`, "PUT", {
+                      is_open: !event.is_open,
+                    })
+                  }
+                >
+                  {event.is_open ? "Tancar inscripcions" : "Obrir inscripcions"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    void load();
+                    void loadCompanies();
+                  }}
+                >
+                  <RefreshCw data-icon="inline-start" />
+                  Actualitzar dades
+                </Button>
+              </div>
               <Card>
                 <CardHeader>
                   <CardTitle>Sobre aquesta edició</CardTitle>
