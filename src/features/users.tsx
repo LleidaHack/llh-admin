@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { UserProfileDetails, type UserProfile as User } from "./user-profile";
 import { searchIndex, searchItems } from "@/lib/search";
@@ -85,18 +86,27 @@ export function Users() {
   );
   return (
     <div className="flex flex-col gap-6">
-      <h1>Usuaris</h1>
+      <div>
+        <p className="eyebrow">COMUNITAT</p>
+        <h1>Usuaris</h1>
+        <p className="text-muted-foreground">
+          Consulta comptes i gestiona l'accés dels participants.
+        </p>
+      </div>
+      <NicknameModeration />
       <ErrorBox error={error} />
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void lookup(email);
         }}
-        className="grid gap-3 sm:flex sm:items-end"
+        className="flex flex-wrap items-end gap-3"
       >
-        <FieldGroup className="sm:max-w-md">
+        <FieldGroup className="max-w-md">
           <Field>
-            <FieldLabel htmlFor="user-email">Correu electrònic</FieldLabel>
+            <FieldLabel htmlFor="user-email">
+              Cercar un compte per correu electrònic
+            </FieldLabel>
             <Input
               id="user-email"
               type="email"
@@ -107,9 +117,10 @@ export function Users() {
             />
           </Field>
         </FieldGroup>
-        <Button disabled={busy}>{busy ? "Cercant…" : "Cercar"}</Button>
+        <Button disabled={busy}>
+          {busy ? "Cercant…" : "Consultar el compte"}
+        </Button>
       </form>
-      <NicknameModeration />
       {selected && (
         <Dialog
           open
@@ -123,6 +134,9 @@ export function Users() {
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
               <DialogTitle>Fitxa de l'usuari</DialogTitle>
+              <DialogDescription>
+                Dades del compte, perfil i participacions.
+              </DialogDescription>
             </DialogHeader>
             <Card>
               <CardHeader>
