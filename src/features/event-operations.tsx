@@ -1134,8 +1134,8 @@ export function EventOperations({
                   })
                 : null;
               return (
-                <Card key={room.id}>
-                  <CardContent className="pt-4">
+                <Card key={room.id} className="py-3">
+                  <CardContent className="">
                     <strong>{room.title}</strong>
                     <p>
                       {turns.length} equips
@@ -1315,9 +1315,24 @@ function PresentationRow({
     pinned: !!p.pinned,
     override: false,
   });
+  const dirty =
+    draft.room !== p.room ||
+    draft.state !== p.state ||
+    draft.position !== p.position ||
+    draft.scheduled_at !== p.scheduled_at ||
+    draft.pinned !== !!p.pinned ||
+    draft.override;
+  const STATES = [
+    ["waiting", "En espera"],
+    ["called", "Cridat"],
+    ["presenting", "Presentant"],
+    ["done", "Finalitzat"],
+    ["absent", "Absent"],
+    ["postponed", "Ajornat"],
+  ];
   return (
     <form
-      className="grid gap-3 rounded border p-4 md:grid-cols-3"
+      className="flex flex-col gap-2 rounded border bg-card p-3"
       onSubmit={(e) => {
         e.preventDefault();
         void save({
@@ -1328,55 +1343,46 @@ function PresentationRow({
         });
       }}
     >
-      <strong>{p.team}</strong>
-      <select
-        aria-label="Sala"
-        value={draft.room}
-        onChange={(e) => setDraft({ ...draft, room: e.target.value })}
-      >
-        {rooms.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.title}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Estat"
-        value={draft.state}
-        onChange={(e) => setDraft({ ...draft, state: e.target.value })}
-      >
-        {["waiting", "called", "presenting", "done", "absent", "postponed"].map(
-          (s, i) => (
-            <option key={s} value={s}>
-              {
-                [
-                  "En espera",
-                  "Cridat",
-                  "Presentant",
-                  "Finalitzat",
-                  "Absent",
-                  "Ajornat",
-                ][i]
-              }
+      <div className="flex flex-wrap items-center gap-2">
+        <strong className="min-w-32 flex-1">{p.team}</strong>
+        <select
+          aria-label="Sala"
+          value={draft.room}
+          onChange={(e) => setDraft({ ...draft, room: e.target.value })}
+        >
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.title}
             </option>
-          ),
-        )}
-      </select>
-      <label>
-        Ordre
+          ))}
+        </select>
+        <select
+          aria-label="Estat"
+          value={draft.state}
+          onChange={(e) => setDraft({ ...draft, state: e.target.value })}
+        >
+          {STATES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
         <Input
+          aria-label="Ordre"
+          title="Ordre"
           type="number"
           min={0}
+          className="w-16"
           value={draft.position}
           onChange={(e) =>
             setDraft({ ...draft, position: Number(e.target.value) })
           }
         />
-      </label>
-      <label>
-        Hora estimada
         <Input
+          aria-label="Hora estimada"
+          title="Hora estimada"
           type="datetime-local"
+          className="w-auto"
           value={localDate(draft.scheduled_at)}
           onChange={(e) =>
             setDraft({
@@ -1387,53 +1393,61 @@ function PresentationRow({
             })
           }
         />
-      </label>
-      <div>
-        <label className="block">
+        <label className="flex items-center gap-1 text-sm">
           <input
             type="checkbox"
             checked={draft.pinned}
             onChange={(e) => setDraft({ ...draft, pinned: e.target.checked })}
-          />{" "}
-          Fixar horari
+          />
+          Fixar
         </label>
-        <label>
-          <input
-            type="checkbox"
-            disabled={!canOverride}
-            checked={draft.override}
-            onChange={(e) => setDraft({ ...draft, override: e.target.checked })}
-          />{" "}
-          Autoritzar excepció
-        </label>
+        {canOverride && (
+          <label className="flex items-center gap-1 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.override}
+              onChange={(e) =>
+                setDraft({ ...draft, override: e.target.checked })
+              }
+            />
+            Excepció
+          </label>
+        )}
+        {dirty && (
+          <Button size="sm" disabled={busy}>
+            Desar
+          </Button>
+        )}
       </div>
-      <Button disabled={busy}>Aplicar canvi</Button>
-      <div className="flex flex-wrap gap-2 md:col-span-3">
+      <div className="flex flex-wrap gap-1">
         {["waiting", "called", "postponed"].includes(p.state) && (
           <Button
             type="button"
-            variant="outline"
+            size="sm"
+            variant="ghost"
             disabled={busy}
             onClick={() => void recovery("absent")}
           >
-            Marcar absent i cridar següent
+            Absent i cridar següent
           </Button>
         )}
         {["absent", "postponed", "called"].includes(p.state) && (
           <Button
             type="button"
-            variant="outline"
+            size="sm"
+            variant="ghost"
             disabled={busy}
             onClick={() => void recovery("requeue")}
           >
-            Tornar al final de la cua
+            Al final de la cua
           </Button>
         )}
-        {!["presenting", "done"].includes(p.state) && (
+        {!["presenting", "done"].includes(p.state) && draft.room !== p.room && (
           <Button
             type="button"
+            size="sm"
             variant="outline"
-            disabled={busy || draft.room === p.room}
+            disabled={busy}
             onClick={() => void recovery("move")}
           >
             Moure a la sala seleccionada

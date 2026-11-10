@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog, ErrorBox } from "@/components/shared";
+import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import {
   request,
   fetchFileUrl,
@@ -169,6 +170,7 @@ export function VouchersCard({ id }: { id: number }) {
   const [vouchers, setVouchers] = useState<Voucher[] | null>(null);
   const [count, setCount] = useState("100");
   const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<{
@@ -266,6 +268,10 @@ export function VouchersCard({ id }: { id: number }) {
       (v.hacker?.name ?? "").toLowerCase().includes(needle) ||
       (v.hacker?.email ?? "").toLowerCase().includes(needle),
   );
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(visible.length / PAGE_SIZE) - 1),
+  );
 
   return (
     <Card>
@@ -324,7 +330,10 @@ export function VouchersCard({ id }: { id: number }) {
               aria-label="Cerca vouchers"
               placeholder="Cerca per codi, nom o correu…"
               value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setPage(0);
+              }}
               className="sm:max-w-sm"
             />
             <Table>
@@ -337,58 +346,59 @@ export function VouchersCard({ id }: { id: number }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visible.slice(0, 200).map((v) => (
-                  <TableRow key={v.id}>
-                    <TableCell className="font-mono">{v.code}</TableCell>
-                    <TableCell>
-                      {v.hacker ? (
-                        <>
-                          {v.hacker.name}
-                          {v.hacker.email && (
-                            <span className="block text-xs text-muted-foreground">
-                              {v.hacker.email}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">Lliure</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {v.assigned_at
-                        ? new Date(v.assigned_at).toLocaleString("ca")
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {v.hacker && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => resetVoucher(v)}
-                        >
-                          Reiniciar
-                        </Button>
-                      )}
-                      {v.hacker && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => release(v)}
-                        >
-                          Invalidar
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {visible
+                  .slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
+                  .map((v) => (
+                    <TableRow key={v.id}>
+                      <TableCell className="font-mono">{v.code}</TableCell>
+                      <TableCell>
+                        {v.hacker ? (
+                          <>
+                            {v.hacker.name}
+                            {v.hacker.email && (
+                              <span className="block text-xs text-muted-foreground">
+                                {v.hacker.email}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">Lliure</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {v.assigned_at
+                          ? new Date(v.assigned_at).toLocaleString("ca")
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {v.hacker && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => resetVoucher(v)}
+                          >
+                            Reiniciar
+                          </Button>
+                        )}
+                        {v.hacker && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => release(v)}
+                          >
+                            Invalidar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
-            {visible.length > 200 && (
-              <p className="text-sm text-muted-foreground">
-                Es mostren 200 de {visible.length}. Afina la cerca o exporta el
-                CSV.
-              </p>
-            )}
+            <SearchPagination
+              page={currentPage}
+              total={visible.length}
+              onChange={setPage}
+            />
           </>
         )}
         {vouchers && vouchers.length === 0 && (
