@@ -97,6 +97,7 @@ export function EventOperations({
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
+  const [teamQuery, setTeamQuery] = useState("");
   const [staff, setStaff] = useState<Item[]>([]);
   const tab = section;
   const [history, setHistory] = useState<Item[]>([]),
@@ -232,6 +233,19 @@ export function EventOperations({
   }, [id, section]);
   if (!data || !draft)
     return <p role="status">{error || "Carregant operacions…"}</p>;
+  const fold = (text: string) =>
+    text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const teamNeedle = fold(teamQuery.trim());
+  const visiblePresentations: Item[] = (data.presentations ?? []).filter(
+    (p: Item) =>
+      !teamNeedle ||
+      fold(
+        `${p.team} ${data.rooms?.find((r: Item) => r.id === p.room)?.title ?? ""}`,
+      ).includes(teamNeedle),
+  );
   return (
     <div className="event-operations space-y-5">
       {section === "challenges" && (
@@ -1148,7 +1162,20 @@ export function EventOperations({
               );
             })}
           </div>
-          {data.presentations.map((p: Item) => (
+          <Input
+            type="search"
+            aria-label="Cercar equip"
+            placeholder="Cercar equip o sala…"
+            className="sm:max-w-sm"
+            value={teamQuery}
+            onChange={(e) => setTeamQuery(e.target.value)}
+          />
+          {!visiblePresentations.length && (
+            <p className="text-sm text-muted-foreground">
+              Cap equip coincideix amb la cerca.
+            </p>
+          )}
+          {visiblePresentations.map((p: Item) => (
             <PresentationRow
               key={`${p.id}-${p.version}`}
               presentation={p}
