@@ -1,5 +1,4 @@
 "use client";
-import { EventMentors } from "./event-mentors";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { setUnsavedChanges } from "@/lib/unsaved";
@@ -86,20 +85,6 @@ export type OperationSection =
   | "alerts"
   | "audit"
   | "roles";
-const sectionTitles: Record<OperationSection, string> = {
-  live: "Pàgina Live",
-  activities: "Agenda i activitats",
-  challenges: "Reptes i recursos",
-  prizes: "Premis",
-  rooms: "Sales i horaris del jurat",
-  meals: "Rondes dels àpats",
-  coins: "LleidaCoins",
-  judging: "Torns de presentació",
-  devpost: "Projectes de Devpost",
-  alerts: "Avisos",
-  audit: "Traçabilitat",
-  roles: "Rols i permisos",
-};
 export function EventOperations({
   id,
   section,
@@ -249,7 +234,6 @@ export function EventOperations({
     return <p role="status">{error || "Carregant operacions…"}</p>;
   return (
     <div className="event-operations space-y-5">
-      <h2 className="text-xl font-bold">{sectionTitles[section]}</h2>
       {section === "challenges" && (
         <ChallengeChoices
           id={id}
@@ -290,24 +274,26 @@ export function EventOperations({
             );
           }}
         >
-          <div
-            className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
-            aria-label="Desar configuració"
-          >
-            <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
-              {busy
-                ? "Desant…"
-                : error ||
-                  (dirty
-                    ? "Canvis pendents de desar"
-                    : notice || "Configuració desada")}
-            </p>
-            {dirty && (
-              <Button type="submit" disabled={busy} className="shrink-0">
-                {busy ? "Desant…" : "Desar configuració"}
-              </Button>
-            )}
-          </div>
+          {(dirty || busy) && (
+            <div
+              className="sticky top-20 z-20 md:top-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-md"
+              aria-label="Desar canvis"
+            >
+              <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
+                {busy
+                  ? "Desant…"
+                  : error ||
+                    (dirty
+                      ? "Canvis pendents de desar"
+                      : notice || "Configuració desada")}
+              </p>
+              {dirty && (
+                <Button type="submit" disabled={busy} className="shrink-0">
+                  {busy ? "Desant…" : "Desar canvis"}
+                </Button>
+              )}
+            </div>
+          )}
           {(tab === "live" || tab === "rooms") && (
             <Card>
               <CardHeader>
@@ -494,9 +480,11 @@ export function EventOperations({
             )
             .map(([key, title]) => (
               <Card key={key}>
-                <CardHeader>
-                  <CardTitle>{title}</CardTitle>
-                </CardHeader>
+                {key !== tab && (
+                  <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                  </CardHeader>
+                )}
                 <CardContent className="space-y-4">
                   {(draft[key] || []).map((item: Item, index: number) => (
                     <div
@@ -678,7 +666,6 @@ export function EventOperations({
       )}
       {tab === "meals" && (
         <div className="space-y-4">
-          <EventMentors base={base} />
           <p>
             Una recollida per persona i ronda. Obrir una ronda nova no esborra
             les anteriors.

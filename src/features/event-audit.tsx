@@ -58,13 +58,7 @@ export function AuditLogTab({
   };
   return (
     <div className="flex flex-col gap-4">
-      <div className="page-heading">
-        <div>
-          <h2>Historial</h2>
-          <p className="text-sm text-muted-foreground">
-            Qui ha acceptat o rebutjat cada inscripció, i quan.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button
           variant="outline"
           onClick={() => void load()}

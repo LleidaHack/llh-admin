@@ -529,11 +529,11 @@ h2 {
   border-bottom: 1px solid var(--border);
 }
 .event-operations select {
-  min-height: 2.75rem;
+  min-height: 2rem;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.25rem 0.5rem;
   background: var(--card);
   color: var(--foreground);
   font: inherit;
@@ -552,4 +552,14 @@ h2 {
 .user-access-role {
   border-top: 4px solid var(--brand-orange);
   background: var(--card);
+}
+
+/* Buttons keep their natural width inside grid/column layouts. */
+.event-operations .grid > button,
+.event-operations form.grid > button {
+  justify-self: start;
+}
+.event-operations .flex-col > button,
+.event-operations form:not(.flex-row) > button {
+  align-self: flex-start;
 }

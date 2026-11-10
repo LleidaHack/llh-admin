@@ -43,7 +43,10 @@ import { UserAccountProfile, type UserProfile } from "./user-profile";
 import { StatisticsGroups } from "./statistics-groups";
 import { dietaryWarning } from "@/lib/dietary";
 import { ParticipantNotes } from "./participant-notes";
-import { statisticLabels, type StatisticsParticipant } from "@/lib/event-statistics";
+import {
+  statisticLabels,
+  type StatisticsParticipant,
+} from "@/lib/event-statistics";
 
 // The backend returns these endpoints as untyped dicts/lists, so render whatever
 // shape comes back generically instead of hard-coding fields that may drift.
@@ -172,15 +175,16 @@ function Section({
 }
 
 export function StatisticsTab({ id }: { id: number }) {
-  const stats = useResource<StatisticsParticipant[]>(`/v1/event/${id}/statistics_participants`);
+  const stats = useResource<StatisticsParticipant[]>(
+    `/v1/event/${id}/statistics_participants`,
+  );
   const unregistered = useResource<unknown>(
     `/v1/event/${id}/count_unregistered_hackers/`,
   );
   return (
     <div className="flex flex-col gap-5">
       <Section
-        title="Estadístiques de l'esdeveniment"
-        description="Participants acceptats agrupats per resposta. S’unifiquen majúscules, accents i espais; els valors es mostren de més a menys freqüents."
+        title="Respostes dels acceptats"
         loading={stats.loading}
         error={stats.error}
         onReload={stats.reload}
@@ -193,7 +197,6 @@ export function StatisticsTab({ id }: { id: number }) {
       </Section>
       <Section
         title="Hackers sense inscripció"
-        description="Comptes de hacker que no s'han inscrit a aquest esdeveniment."
         loading={unregistered.loading}
         error={unregistered.error}
         onReload={unregistered.reload}
@@ -213,7 +216,6 @@ export function LogisticsTab({ id }: { id: number }) {
     <div className="flex flex-col gap-5">
       <Section
         title="Talles de samarreta"
-        description="Recompte de talles per preparar el material."
         loading={sizes.loading}
         error={sizes.error}
         onReload={sizes.reload}
@@ -226,7 +228,6 @@ export function LogisticsTab({ id }: { id: number }) {
       </Section>
       <Section
         title="Restriccions alimentàries"
-        description="Necessitats a tenir en compte per al càtering."
         loading={food.loading}
         error={food.error}
         onReload={food.reload}
@@ -292,11 +293,7 @@ export function AcceptedMailsCard({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Correus dels participants acceptats</CardTitle>
-        <CardDescription>
-          Exporta les adreces per enviar comunicacions des d&apos;una altra
-          eina.
-        </CardDescription>
+        <CardTitle>Exportar correus dels acceptats</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <ErrorBox error={error} />
@@ -365,10 +362,9 @@ export function MailActions({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comunicacions per correu</CardTitle>
+        <CardTitle>Enviar correus</CardTitle>
         <CardDescription>
-          Accions que envien correus reals als participants. Confirma abans de
-          continuar.
+          Envien correus reals als participants.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
@@ -460,17 +456,31 @@ export function ParticipantDetailDialog({
     setTeamsLoading(true);
     setTeamsError("");
     setTeams([]);
-    void request<{ groups: Team[] }>(`/v1/event/${eventId}/groups?include_images=false`)
+    void request<{ groups: Team[] }>(
+      `/v1/event/${eventId}/groups?include_images=false`,
+    )
       .then(({ groups }) => {
-        if (active) setTeams(groups.filter((team) => team.members.some((member) =>
-          member.id != null
-            ? member.id === participant.id
-            : !!participant.nickname && member.nickname === participant.nickname,
-        )));
+        if (active)
+          setTeams(
+            groups.filter((team) =>
+              team.members.some((member) =>
+                member.id != null
+                  ? member.id === participant.id
+                  : !!participant.nickname &&
+                    member.nickname === participant.nickname,
+              ),
+            ),
+          );
       })
-      .catch((e) => { if (active) setTeamsError(errorMessage(e)); })
-      .finally(() => { if (active) setTeamsLoading(false); });
-    return () => { active = false; };
+      .catch((e) => {
+        if (active) setTeamsError(errorMessage(e));
+      })
+      .finally(() => {
+        if (active) setTeamsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [eventId, participant.id, participant.nickname]);
   const [data, setData] = useState<HackerProfile>();
   const [loading, setLoading] = useState(true);
@@ -554,23 +564,38 @@ export function ParticipantDetailDialog({
         <ErrorBox error={error} />
         <div className="flex flex-col gap-5">
           <Card>
-            <CardHeader><CardTitle>Equip d’aquest esdeveniment</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Equip d’aquest esdeveniment</CardTitle>
+            </CardHeader>
             <CardContent>
-              {teamsLoading ? <p role="status">Carregant l’equip…</p>
-                : teamsError ? <ErrorBox error={teamsError} />
-                : teams.length ? teams.map((team) => (
+              {teamsLoading ? (
+                <p role="status">Carregant l’equip…</p>
+              ) : teamsError ? (
+                <ErrorBox error={teamsError} />
+              ) : teams.length ? (
+                teams.map((team) => (
                   <div key={team.id} className="space-y-2">
                     <p className="font-semibold">{team.name}</p>
-                    {team.description && <p className="text-sm text-muted-foreground">{team.description}</p>}
+                    {team.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {team.description}
+                      </p>
+                    )}
                     <ul className="list-disc pl-5 text-sm">
                       {team.members.map((member) => (
                         <li key={member.id ?? member.nickname}>
-                          {member.name}{member.nickname ? ` · ${member.nickname}` : ""}
+                          {member.name}
+                          {member.nickname ? ` · ${member.nickname}` : ""}
                         </li>
                       ))}
                     </ul>
                   </div>
-                )) : <p className="text-sm text-muted-foreground">Aquest participant encara no té equip en aquest esdeveniment.</p>}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Aquest participant encara no té equip en aquest esdeveniment.
+                </p>
+              )}
             </CardContent>
           </Card>
           {cv.trim() ? (
@@ -668,14 +693,17 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [dietaryAlert, setDietaryAlert] = useState<{ participant: string; restriction: string } | null>(null);
+  const [dietaryAlert, setDietaryAlert] = useState<{
+    participant: string;
+    restriction: string;
+  } | null>(null);
   if (!meals.length) return null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Registrar un àpat amb acreditació</CardTitle>
+        <CardTitle>Registrar un àpat</CardTitle>
         <CardDescription>
-          Introdueix el codi de l’acreditació física. Els tiquets d’entrada no són vàlids per als àpats.
+          Codi de l’acreditació física (no el tiquet d’entrada).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -687,12 +715,19 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
             setBusy(true);
             setError("");
             try {
-              const result = await request<{ participant?: string; food_restrictions?: string | null }>(
+              const result = await request<{
+                participant?: string;
+                food_restrictions?: string | null;
+              }>(
                 `/v1/meal/${mealId}/eat/${encodeURIComponent(code.trim())}`,
                 "PUT",
               );
               const restriction = dietaryWarning(result.food_restrictions);
-              if (restriction) setDietaryAlert({ participant: result.participant || "Participant", restriction });
+              if (restriction)
+                setDietaryAlert({
+                  participant: result.participant || "Participant",
+                  restriction,
+                });
               toast.success("Àpat registrat");
               setCode("");
             } catch (err) {
@@ -735,12 +770,24 @@ export function MealCheckIn({ meals }: { meals: Meal[] }) {
             Registrar àpat
           </Button>
         </form>
-        {dietaryAlert && <div role="alert" className="mt-4 space-y-2 rounded-md border-2 border-amber-500 p-4">
-          <p className="font-semibold">Atenció: restriccions alimentàries · {dietaryAlert.participant}</p>
-          <p className="whitespace-pre-wrap">{dietaryAlert.restriction}</p>
-          <p>Dirigeix aquesta persona a la cua d’intoleràncies i dietes especials. L’àpat ja s’ha registrat.</p>
-          <Button onClick={() => setDietaryAlert(null)}>Entès · continuar</Button>
-        </div>}
+        {dietaryAlert && (
+          <div
+            role="alert"
+            className="mt-4 space-y-2 rounded-md border-2 border-amber-500 p-4"
+          >
+            <p className="font-semibold">
+              Atenció: restriccions alimentàries · {dietaryAlert.participant}
+            </p>
+            <p className="whitespace-pre-wrap">{dietaryAlert.restriction}</p>
+            <p>
+              Dirigeix aquesta persona a la cua d’intoleràncies i dietes
+              especials. L’àpat ja s’ha registrat.
+            </p>
+            <Button onClick={() => setDietaryAlert(null)}>
+              Entès · continuar
+            </Button>
+          </div>
+        )}
         <div className="mt-3">
           <ErrorBox error={error} />
         </div>

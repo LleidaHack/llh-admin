@@ -17,8 +17,8 @@ export function EventMentors({ base }: { base: string }) {
     setBusy(true); setError("");
     try { await action(); await load(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
-  return <Card><CardHeader><CardTitle>Mentors · {items.filter(m => m.active).length} actius</CardTitle></CardHeader><CardContent className="space-y-4">
-    <p>Només àpats. L’organització els vincula una acreditació des de l’escàner, sense tiquet d’entrada.</p>
+  return <Card><CardHeader><CardTitle>{items.filter(m => m.active).length} mentors actius</CardTitle></CardHeader><CardContent className="space-y-4">
+    <p className="text-sm text-muted-foreground">Només tenen accés als àpats. L’acreditació es vincula des de l’escàner.</p>
     <ErrorBox error={error} />
     <form className="flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); void run(async () => { await request(base + "/mentors", "POST", { name, ...(userId ? { user_id: Number(userId) } : {}) }); setName(""); setUserId(""); }); }}>
       <label>Nom del mentor<Input required minLength={2} maxLength={150} value={name} onChange={e => setName(e.target.value)} /></label>

@@ -658,12 +658,6 @@ export function EventDetail({
         </TabsContent>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
-            <div>
-              <h2>Inscripcions</h2>
-              <p className="text-sm text-muted-foreground">
-                Revisa les sol·licituds i decideix qui participa.
-              </p>
-            </div>
             <div className="flex flex-wrap gap-2">
               <NativeSelect
                 aria-label="Ordenar les inscripcions"
@@ -980,7 +974,6 @@ export function EventDetail({
           />
         </TabsContent>
         <TabsContent value="teams" className="flex flex-col gap-4 pt-4">
-          <h2>Equips inscrits</h2>
           <p className="text-sm text-muted-foreground">
             El rebuig de l'equip només afecta els membres no acceptats. Per
             canviar una acceptació, retira-la primer a Inscripcions.
@@ -1061,7 +1054,6 @@ export function EventDetail({
           )}
         </TabsContent>
         <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
-          <h2>Patrocinadors de l'esdeveniment</h2>
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
@@ -1187,8 +1179,7 @@ export function EventDetail({
           )}
         </TabsContent>
         <TabsContent value="meals" className="flex flex-col gap-4 pt-4">
-          <div className="page-heading">
-            <h2>Àpats</h2>
+          <div className="flex justify-end">
             <Button onClick={() => setMealEditor("new")}>
               <Plus data-icon="inline-start" />
               Crear àpat
@@ -1249,7 +1240,6 @@ export function EventDetail({
           />
         </TabsContent>
         <TabsContent value="checkin" className="flex flex-col gap-5 pt-4">
-          <VouchersCard id={id} />
           <Card>
             <CardHeader>
               <CardTitle>Registrar l'arribada</CardTitle>
@@ -1281,19 +1271,15 @@ export function EventDetail({
                     />
                   </Field>
                 </FieldGroup>
-                <Button disabled={busy || !code.trim()}>
+                <Button className="self-start" disabled={busy || !code.trim()}>
                   Registrar l'arribada
                 </Button>
               </form>
             </CardContent>
           </Card>
+          <VouchersCard id={id} />
         </TabsContent>
         <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
-          <h2>Comunicacions</h2>
-          <p className="text-sm text-muted-foreground">
-            Exporta correus i envia comunicacions als participants d&apos;aquest
-            esdeveniment.
-          </p>
           <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
