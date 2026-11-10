@@ -11,7 +11,6 @@ import { useParticipantDetails } from "./use-participant-details";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Pencil,
@@ -264,11 +263,11 @@ export function EventDetail({
     ),
     [code, setCode] = useState("");
   const [activeSection, setActiveSection] = useState("status");
-  const [navOpen, setNavOpen] = useState(false);
-  const [sidebarSlot, setSidebarSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setSidebarSlot(document.getElementById("sidebar-slot"));
-  }, []);
+  const [lastSections, setLastSections] = useState<Record<string, string>>({});
+  const activeGroup =
+    eventMenu.find((group) =>
+      group.items.some(([key]) => key === activeSection),
+    ) ?? eventMenu[0];
   useEffect(() => {
     setActiveSection(sectionFromUrl());
     const onPop = () => setActiveSection(sectionFromUrl());
@@ -276,11 +275,12 @@ export function EventDetail({
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   const selectSection = (value: string) => {
-    setNavOpen(false);
     if (value === activeSection) return;
     if (!confirmDiscardUnsaved()) return;
     setUnsavedChanges(false);
     setActiveSection(value);
+    const group = eventMenu.find((g) => g.items.some(([key]) => key === value));
+    if (group) setLastSections((prev) => ({ ...prev, [group.label]: value }));
     const url = new URL(window.location.href);
     url.searchParams.set("s", value);
     window.history.pushState(null, "", url);
@@ -574,104 +574,73 @@ export function EventDetail({
         </Button>
       </>
     );
-  const count = (key: string) =>
-    key === "participants"
-      ? participants.length
-      : key === "teams"
-        ? teams.length
-        : undefined;
-  const eventTitle = (
-    <div className="min-w-0 px-3">
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-3" />
-        Esdeveniments
-      </button>
-      <p className="truncate font-semibold">{event.name}</p>
-      <p className="text-xs text-muted-foreground">
-        {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"} ·{" "}
-        {participants.length}/{event.max_participants} inscrits
-        {confirmedCount > 0 && ` · ${confirmedCount} confirmats`}
-      </p>
-    </div>
-  );
-  const sectionNav = (
-    <div
-      role="navigation"
-      aria-label="Seccions de l’esdeveniment"
-      className="flex flex-col gap-4"
-    >
-      {eventMenu.map((group) => (
-        <div key={group.label} className="flex flex-col gap-0.5">
-          <p className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {group.label}
-          </p>
-          {group.items.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => selectSection(key)}
-              aria-current={key === activeSection ? "page" : undefined}
-              className={cn(
-                "flex min-h-9 items-center justify-between rounded-md px-3 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                key === activeSection &&
-                  "bg-secondary font-semibold text-secondary-foreground hover:bg-secondary hover:text-secondary-foreground",
-              )}
-            >
-              {label}
-              {count(key) !== undefined && (
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {count(key)}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
   return (
-    <div className="flex flex-col gap-5">
-      <ErrorBox error={error} />
-      <div className="event-mobile-bar sticky top-0 z-30 -mx-4 border-b bg-background px-4 py-2 md:hidden">
-        <Button
-          variant="outline"
-          className="w-full justify-between"
-          onClick={() => setNavOpen(true)}
-          aria-haspopup="dialog"
+    <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
         >
-          <span className="truncate">
-            <span className="text-muted-foreground">{event.name} · </span>
-            {sectionLabels[activeSection]}
-          </span>
-          <MoreHorizontal />
-        </Button>
+          <ArrowLeft className="size-4" />
+          Esdeveniments
+        </button>
+        <span className="text-muted-foreground">/</span>
+        <span className="truncate font-semibold">{event.name}</span>
+        <span className="text-muted-foreground">
+          · {event.is_open ? "Inscripcions obertes" : "Inscripcions tancades"} ·{" "}
+          {participants.length}/{event.max_participants} inscrits
+          {confirmedCount > 0 && ` · ${confirmedCount} confirmats`}
+        </span>
       </div>
-      <Dialog open={navOpen} onOpenChange={setNavOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Seccions</DialogTitle>
-          </DialogHeader>
-          {eventTitle}
-          {sectionNav}
-        </DialogContent>
-      </Dialog>
-      {sidebarSlot &&
-        createPortal(
-          <div className="flex flex-col gap-5">
-            {eventTitle}
-            {sectionNav}
-          </div>,
-          sidebarSlot,
+      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-2 border-b bg-background px-4 pb-2 pt-1 sm:mx-0 sm:px-0">
+        <nav
+          aria-label="Àrees de l’esdeveniment"
+          className="flex gap-1 overflow-x-auto"
+        >
+          {eventMenu.map((group) => (
+            <Button
+              key={group.label}
+              variant={
+                activeGroup.label === group.label ? "default" : "outline"
+              }
+              aria-pressed={activeGroup.label === group.label}
+              className="min-h-10 flex-1 shrink-0 whitespace-nowrap"
+              onClick={() =>
+                selectSection(lastSections[group.label] || group.items[0][0])
+              }
+            >
+              {group.label}
+            </Button>
+          ))}
+        </nav>
+        {activeGroup.items.length > 1 && (
+          <nav
+            aria-label={activeGroup.label}
+            className="flex gap-1 overflow-x-auto"
+          >
+            {activeGroup.items.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => selectSection(key)}
+                aria-current={key === activeSection ? "page" : undefined}
+                className={cn(
+                  "min-h-9 shrink-0 whitespace-nowrap rounded-md px-3 text-sm transition-colors hover:bg-muted",
+                  key === activeSection && "bg-muted font-semibold",
+                )}
+              >
+                {label}
+                {key === "participants" && ` (${participants.length})`}
+                {key === "teams" && ` (${teams.length})`}
+              </button>
+            ))}
+          </nav>
         )}
+      </div>
+      <ErrorBox error={error} />
       <div>
         <div className="min-w-0">
-          <h2 className="mb-1 text-xl font-semibold">
-            {sectionLabels[activeSection]}
-          </h2>
           <Tabs value={activeSection} onValueChange={selectSection}>
             <TabsContent value="mentors" className="pt-4">
               <EventMentors base={`/v1/operations/${id}`} />
