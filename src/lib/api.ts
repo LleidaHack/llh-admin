@@ -56,6 +56,8 @@ export type Participant = {
   registered_at?: string | null;
   notes_count?: number;
   lleidacoins?: number;
+  age_at_event?: number | null;
+  is_minor?: boolean | null;
   has_cv?: boolean;
   // Only meaningful for accepted participants.
   confirmed_assistance?: boolean;
