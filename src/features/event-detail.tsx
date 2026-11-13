@@ -8,6 +8,10 @@ import { useCanRunCritical } from "@/lib/viewer";
 import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
+import {
+  createCompanyCatalogueLoader,
+  needsCompanyCatalogue,
+} from "@/lib/company-catalogue";
 import { searchIndex, searchItems } from "@/lib/search";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -189,6 +193,7 @@ const SORTS = {
 } as const;
 type ParticipantSort = keyof typeof SORTS;
 const byName = new Intl.Collator("ca", { sensitivity: "base" }).compare;
+const noVisibleParticipants: Participant[] = [];
 // The server list follows registration order, so its index breaks ties and
 // orders registrations made before registered_at was recorded.
 function sortParticipants(list: Participant[], sort: ParticipantSort) {
@@ -228,8 +233,13 @@ export function EventDetail({
     [participants, setParticipants] = useState<Participant[]>([]),
     [teams, setTeams] = useState<Team[]>([]),
     [sponsors, setSponsors] = useState<Company[]>([]),
-    [companies, setCompanies] = useState<Company[]>([]),
+    [companies, setCompanies] = useState<Company[] | null>(null),
     [meals, setMeals] = useState<Meal[]>([]);
+  const [loadCompanyCatalogue] = useState(() =>
+    createCompanyCatalogueLoader(() => request<Company[]>("/v1/company/all")),
+  );
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState("");
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
@@ -303,21 +313,26 @@ export function EventDetail({
       setLoading(false);
     }
   }, [id]);
-  // The company list carries every logo (~2 MB) and does not change when
-  // participants or meals do: load it once instead of after every action.
-  const loadCompanies = useCallback(async () => {
-    try {
-      setCompanies(await request<Company[]>("/v1/company/all"));
-    } catch (e) {
-      setError(errorMessage(e));
-    }
-  }, []);
+  const loadCompanies = useCallback(
+    async (refresh = false) => {
+      setCompaniesLoading(true);
+      setCompaniesError("");
+      try {
+        setCompanies(await loadCompanyCatalogue(refresh));
+      } catch (error) {
+        setCompaniesError(errorMessage(error));
+      } finally {
+        setCompaniesLoading(false);
+      }
+    },
+    [loadCompanyCatalogue],
+  );
   useEffect(() => {
     void load();
   }, [load]);
   useEffect(() => {
-    void loadCompanies();
-  }, [loadCompanies]);
+    if (needsCompanyCatalogue(activeSection)) void loadCompanies();
+  }, [activeSection, loadCompanies]);
   // After accepting/rejecting only the registrations change: skip reloading
   // sponsors, companies, meals and teams.
   const loadParticipants = useCallback(async () => {
@@ -541,7 +556,10 @@ export function EventDetail({
       filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
     [filtered, currentPage],
   );
-  const visibleParticipants = useParticipantDetails(id, visible);
+  const visibleParticipants = useParticipantDetails(
+    id,
+    activeSection === "participants" ? visible : noVisibleParticipants,
+  );
   if (loading) return <Loading />;
   if (!event)
     return (
@@ -552,6 +570,21 @@ export function EventDetail({
         </Button>
       </>
     );
+  const companyCatalogueFeedback = (
+    <>
+      {companiesLoading && <p role="status">Carregant empreses…</p>}
+      <ErrorBox error={companiesError} />
+      {companiesError && (
+        <Button
+          variant="outline"
+          disabled={companiesLoading}
+          onClick={() => void loadCompanies(true)}
+        >
+          Tornar a carregar les empreses
+        </Button>
+      )}
+    </>
+  );
   return (
     <div className="flex flex-col gap-6">
       {topbarSlot && createPortal(event.name, topbarSlot)}
@@ -653,8 +686,13 @@ export function EventDetail({
         <TabsContent value="mentors" className="pt-4">
           <EventMentors base={`/v1/operations/${id}`} />
         </TabsContent>
-        <TabsContent value="company-portal" className="pt-4">
-          <CompanyPortalAccess id={id} companies={companies} />
+        <TabsContent value="company-portal" className="space-y-4 pt-4">
+          {companyCatalogueFeedback}
+          <CompanyPortalAccess
+            id={id}
+            companies={companies ?? []}
+            companiesLoading={companiesLoading || companies === null}
+          />
         </TabsContent>
         <TabsContent value="participants" className="flex flex-col gap-4 pt-4">
           <div className="page-heading">
@@ -1056,6 +1094,7 @@ export function EventDetail({
           )}
         </TabsContent>
         <TabsContent value="sponsors" className="flex flex-col gap-4 pt-4">
+          {companyCatalogueFeedback}
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
@@ -1074,6 +1113,7 @@ export function EventDetail({
               </FieldLabel>
               <NativeSelect
                 id="company-select"
+                disabled={companiesLoading || companies === null}
                 value={companyId}
                 onChange={(e) => setCompanyId(e.target.value)}
                 required
@@ -1081,7 +1121,7 @@ export function EventDetail({
                 <NativeSelectOption value="">
                   Selecciona una empresa
                 </NativeSelectOption>
-                {companies
+                {(companies ?? [])
                   .filter((c) => !sponsors.some((s) => s.id === c.id))
                   .map((c) => (
                     <NativeSelectOption key={c.id} value={c.id}>
@@ -1090,7 +1130,9 @@ export function EventDetail({
                   ))}
               </NativeSelect>
             </Field>
-            <Button disabled={busy || !companyId}>Vincular patrocinador</Button>
+            <Button disabled={busy || companiesLoading || !companyId}>
+              Vincular patrocinador
+            </Button>
           </form>
           <p className="text-sm text-muted-foreground">
             Pots crear empreses noves a la secció Empreses del menú.
@@ -1320,7 +1362,7 @@ export function EventDetail({
               variant="outline"
               onClick={() => {
                 void load();
-                void loadCompanies();
+                if (companies !== null) void loadCompanies(true);
               }}
             >
               <RefreshCw data-icon="inline-start" />
