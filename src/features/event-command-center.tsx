@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { groupDietaryResponses } from "@/lib/dietary";
 
 type Status = {
   server_time: string;
@@ -150,14 +151,30 @@ export function EventCommandCenter({ id }: { id: number }) {
               </CardHeader>
               <CardContent>
                 <p className="mb-3 text-sm">
-                  Només participants acceptats i confirmats. Les respostes es
-                  mostren tal com s’han declarat.
+                  Només participants acceptats i confirmats. Una persona pot
+                  comptar en diverses categories: no en sumis els totals.
+                  Consulta les respostes originals abans de preparar els àpats;
+                  les agrupacions no distingeixen al·lèrgies d’intoleràncies.
                 </p>
                 {data.dietary.length ? (
-                  data.dietary.map((d) => (
-                    <p key={d.restriction}>
-                      {d.restriction}: <strong>{d.count}</strong>
-                    </p>
+                  groupDietaryResponses(data.dietary).map((group) => (
+                    <details key={group.label} className="border-b py-2">
+                      <summary className="cursor-pointer break-words rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
+                        {group.label}:{" "}
+                        <strong className="tabular-nums">{group.count}</strong>
+                      </summary>
+                      <ul className="mt-2 space-y-1 pl-5 text-sm">
+                        {group.originals.map((original, index) => (
+                          <li
+                            key={index}
+                            className="break-words whitespace-pre-wrap"
+                          >
+                            {original.restriction || "Sense especificar"}:{" "}
+                            {original.count}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   ))
                 ) : (
                   <p>Cap restricció declarada.</p>
