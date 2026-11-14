@@ -1,5 +1,4 @@
 "use client";
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -9,12 +8,10 @@ import {
   Loader2Icon,
 } from "lucide-react";
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
+const Toaster = ({ theme = "light", ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       containerAriaLabel="Notificacions"
       className="toaster group"
       icons={{

@@ -33,9 +33,11 @@ const deliveryLabels: Record<string, string> = {
 export function CompanyPortalAccess({
   id,
   companies,
+  companiesLoading = false,
 }: {
   id: number;
   companies: Company[];
+  companiesLoading?: boolean;
 }) {
   const [rows, setRows] = useState<Access[]>([]),
     [rooms, setRooms] = useState<{ id: string; title: string }[]>([]);
@@ -114,7 +116,7 @@ export function CompanyPortalAccess({
             <NativeSelect
               required
               value={company}
-              disabled={busy}
+              disabled={busy || companiesLoading}
               onChange={(e) => {
                 setCompany(e.target.value);
                 const existing = rows.find(
@@ -166,7 +168,7 @@ export function CompanyPortalAccess({
           </fieldset>
           <Button
             className="justify-self-start sm:col-span-2"
-            disabled={busy || !company || !selected.length}
+            disabled={busy || companiesLoading || !company || !selected.length}
           >
             Enviar invitació
           </Button>

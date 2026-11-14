@@ -1008,14 +1008,17 @@ export function EventOperations({
               value={alert.message}
               onChange={(e) => setAlert({ ...alert, message: e.target.value })}
             />
-            <select
-              value={alert.level}
-              onChange={(e) => setAlert({ ...alert, level: e.target.value })}
-            >
-              <option value="info">Informació</option>
-              <option value="warning">Important</option>
-              <option value="danger">Urgent</option>
-            </select>
+            <label className="grid min-w-0 gap-1">
+              Nivell de l’avís
+              <select
+                value={alert.level}
+                onChange={(e) => setAlert({ ...alert, level: e.target.value })}
+              >
+                <option value="info">Informació</option>
+                <option value="warning">Important</option>
+                <option value="danger">Urgent</option>
+              </select>
+            </label>
             <label>
               <input
                 type="checkbox"
@@ -1104,7 +1107,7 @@ export function EventOperations({
             conserven.
           </p>
           <form
-            className="flex flex-wrap gap-2"
+            className="flex flex-wrap items-end gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               void run(() =>
@@ -1116,34 +1119,42 @@ export function EventOperations({
               );
             }}
           >
-            <select
-              required
-              value={enroll.group}
-              onChange={(e) => setEnroll({ ...enroll, group: e.target.value })}
-            >
-              <option value="">Equip…</option>
-              {data.teams.map((t: Item) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <select
-              required
-              value={enroll.challenge}
-              onChange={(e) =>
-                setEnroll({ ...enroll, challenge: e.target.value })
-              }
-            >
-              <option value="">Repte…</option>
-              {data.challenges
-                .filter((c: Item) => c.published)
-                .map((c: Item) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
+            <label className="grid min-w-0 max-w-full gap-1">
+              Equip
+              <select
+                required
+                value={enroll.group}
+                onChange={(e) =>
+                  setEnroll({ ...enroll, group: e.target.value })
+                }
+              >
+                <option value="">Equip…</option>
+                {data.teams.map((t: Item) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
                   </option>
                 ))}
-            </select>
+              </select>
+            </label>
+            <label className="grid min-w-0 max-w-full gap-1">
+              Repte
+              <select
+                required
+                value={enroll.challenge}
+                onChange={(e) =>
+                  setEnroll({ ...enroll, challenge: e.target.value })
+                }
+              >
+                <option value="">Repte…</option>
+                {data.challenges
+                  .filter((c: Item) => c.published)
+                  .map((c: Item) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+              </select>
+            </label>
             <label>
               <input
                 type="checkbox"
@@ -1300,6 +1311,7 @@ export function EventOperations({
         <div className="space-y-3">
           <div className="flex gap-2">
             <Input
+              aria-label="Filtrar per acció"
               placeholder="Filtrar acció: meal, award, redeem…"
               value={historyAction}
               onChange={(e) => setHistoryAction(e.target.value)}
