@@ -161,14 +161,21 @@ export function ConfirmDialog({
   description,
   onConfirm,
   onClose,
+  confirmationText,
+  confirmLabel = "Confirmar",
 }: {
   title: string;
   description: string;
   onConfirm: () => Promise<void>;
   onClose: () => void;
+  confirmationText?: string;
+  confirmLabel?: string;
 }) {
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [confirmation, setConfirmation] = useState("");
+  const confirmed =
+    confirmationText === undefined || confirmation === confirmationText;
   return (
     <Dialog
       open
@@ -182,14 +189,27 @@ export function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <ErrorBox error={error} />
+        {confirmationText !== undefined && (
+          <label className="grid gap-2 text-sm">
+            <span>Escriu «{confirmationText}» per confirmar l’eliminació.</span>
+            <Input
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={busy}
+            />
+          </label>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
             Cancel·lar
           </Button>
           <Button
             variant="destructive"
-            disabled={busy}
+            disabled={busy || !confirmed}
             onClick={async () => {
+              if (busy || !confirmed) return;
               setBusy(true);
               try {
                 await onConfirm();
@@ -202,7 +222,7 @@ export function ConfirmDialog({
               }
             }}
           >
-            {busy ? "Processant…" : "Confirmar"}
+            {busy ? "Processant…" : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

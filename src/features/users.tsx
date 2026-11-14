@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { UserProfileDetails, type UserProfile as User } from "./user-profile";
 import { searchIndex, searchItems } from "@/lib/search";
+import { lookupUser, type UserLookupKind } from "@/lib/user-lookup";
 import { SearchPagination, PAGE_SIZE } from "@/components/search-pagination";
 import { accountType } from "@/lib/locale";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -46,12 +47,13 @@ export function Users() {
     [loading, setLoading] = useState(true),
     [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
-    [email, setEmail] = useState(""),
+    [lookupValue, setLookupValue] = useState(""),
+    [lookupKind, setLookupKind] = useState<UserLookupKind>("email"),
     [selected, setSelected] = useState<User | null>(null),
     [busy, setBusy] = useState(false),
-    [operation, setOperation] = useState<"ban" | "unban" | "verify" | null>(
-      null,
-    );
+    [operation, setOperation] = useState<
+      "ban" | "unban" | "verify" | "delete" | null
+    >(null);
   const lookupId = useRef(0);
   useEffect(() => {
     request<User[]>("/v1/user/all")
@@ -59,15 +61,14 @@ export function Users() {
       .catch((e) => setError(errorMessage(e)))
       .finally(() => setLoading(false));
   }, []);
-  async function lookup(value: string, kind = "email") {
+  async function lookup(value: string, kind: UserLookupKind = "email") {
     const id = ++lookupId.current;
     setBusy(true);
     setError("");
     setSelected(null);
+    setOperation(null);
     try {
-      const user = await request<User>(
-        `/v1/user/${kind}/${encodeURIComponent(value.trim())}`,
-      );
+      const user = await lookupUser(value, kind, (path) => request<User>(path));
       if (id === lookupId.current) setSelected(user);
     } catch (e) {
       if (id === lookupId.current) setError(errorMessage(e));
@@ -98,26 +99,60 @@ export function Users() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void lookup(email);
+          void lookup(lookupValue, lookupKind);
         }}
         className="flex flex-wrap items-end gap-3"
       >
+        <Field className="sm:max-w-xs">
+          <FieldLabel htmlFor="user-lookup-kind">
+            Cercar un compte per
+          </FieldLabel>
+          <select
+            id="user-lookup-kind"
+            className="h-11 rounded-md border border-input bg-background px-3 text-base"
+            value={lookupKind}
+            onChange={(event) => {
+              setLookupKind(event.target.value as UserLookupKind);
+              setLookupValue("");
+            }}
+          >
+            <option value="email">Correu electrònic</option>
+            <option value="phone">Telèfon</option>
+            <option value="nickname">Àlies</option>
+          </select>
+        </Field>
         <FieldGroup className="max-w-md">
           <Field>
-            <FieldLabel htmlFor="user-email">
-              Cercar un compte per correu electrònic
+            <FieldLabel htmlFor="user-lookup-value">
+              {lookupKind === "email"
+                ? "Correu electrònic"
+                : lookupKind === "phone"
+                  ? "Telèfon"
+                  : "Àlies"}
             </FieldLabel>
             <Input
-              id="user-email"
-              type="email"
-              placeholder="participant@exemple.cat"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="user-lookup-value"
+              type={
+                lookupKind === "email"
+                  ? "email"
+                  : lookupKind === "phone"
+                    ? "tel"
+                    : "text"
+              }
+              placeholder={
+                lookupKind === "email"
+                  ? "participant@exemple.cat"
+                  : lookupKind === "phone"
+                    ? "+34 600 000 000"
+                    : "Àlies exacte"
+              }
+              value={lookupValue}
+              onChange={(e) => setLookupValue(e.target.value)}
               required
             />
           </Field>
         </FieldGroup>
-        <Button disabled={busy}>
+        <Button disabled={busy || !lookupValue.trim()}>
           {busy ? "Cercant…" : "Consultar el compte"}
         </Button>
       </form>
@@ -125,7 +160,7 @@ export function Users() {
         <Dialog
           open
           onOpenChange={(open) => {
-            if (!open) {
+            if (!open && !operation) {
               setSelected(null);
               setOperation(null);
             }
@@ -173,22 +208,31 @@ export function Users() {
                       Verificar compte
                     </Button>
                   )}
-                {critical && selected.type === "hacker" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => setOperation("ban")}
-                    >
-                      Bloquejar l'accés
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setOperation("unban")}
-                    >
-                      Desbloquejar l'accés
-                    </Button>
-                  </>
-                )}
+                {critical &&
+                  selected.type === "hacker" &&
+                  selected.id != null && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setOperation("ban")}
+                      >
+                        Bloquejar l'accés
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setOperation("unban")}
+                      >
+                        Desbloquejar l'accés
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        disabled={busy}
+                        onClick={() => setOperation("delete")}
+                      >
+                        Eliminar compte
+                      </Button>
+                    </>
+                  )}
               </CardContent>
             </Card>
             <UserProfileDetails
@@ -198,16 +242,24 @@ export function Users() {
           </DialogContent>
         </Dialog>
       )}
-      <Input
-        aria-label="Filtrar usuaris"
-        placeholder="Filtrar per nom o àlies…"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setPage(0);
-        }}
-        className="sm:max-w-xs"
-      />
+      <Field className="sm:max-w-md">
+        <FieldLabel htmlFor="user-name-filter">
+          Filtrar el llistat per nom o àlies
+        </FieldLabel>
+        <Input
+          id="user-name-filter"
+          placeholder="Filtrar per nom o àlies…"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(0);
+          }}
+          className="sm:max-w-xs"
+        />
+        <p className="text-sm text-muted-foreground">
+          Per correu o telèfon, utilitza la consulta de compte de més amunt.
+        </p>
+      </Field>
       {loading ? (
         <Loading />
       ) : filtered.length ? (
@@ -278,15 +330,44 @@ export function Users() {
       )}
       {operation && selected && (
         <ConfirmDialog
-          title={`${operation === "verify" ? "Verificar" : operation === "ban" ? "Bloquejar" : "Desbloquejar"} ${selected.name}`}
+          key={`${selected.id}-${operation}`}
+          title={`${operation === "delete" ? "Eliminar" : operation === "verify" ? "Verificar" : operation === "ban" ? "Bloquejar" : "Desbloquejar"} ${selected.name}`}
+          confirmationText={
+            operation === "delete" ? selected.nickname : undefined
+          }
+          confirmLabel={
+            operation === "delete" ? "Eliminar definitivament" : "Confirmar"
+          }
           description={
-            operation === "verify"
-              ? `Verificaràs manualment el compte de ${selected.email || selected.nickname}, sense confirmació per correu. Aquesta acció no canvia els permisos ni desbloqueja el compte.`
-              : "L'operació canvia l'accés del participant al servidor."
+            operation === "delete"
+              ? `Eliminaràs definitivament el compte ${selected.nickname} (ID ${selected.id}), amb correu ${selected.email || "no disponible"} i telèfon ${selected.telephone || "no disponible"}. També s’eliminaran les seves inscripcions, participacions i registres d’àpats, i es modificarà la seva pertinença als equips. No es pot desfer. Si l’eliminació es completa, podrà tornar-se a registrar, però haurà de fer de nou la inscripció a l’esdeveniment. Comprova amb la persona que és el compte correcte.`
+              : operation === "verify"
+                ? `Verificaràs manualment el compte de ${selected.email || selected.nickname}, sense confirmació per correu. Aquesta acció no canvia els permisos ni desbloqueja el compte.`
+                : "L'operació canvia l'accés del participant al servidor."
           }
           onClose={() => setOperation(null)}
           onConfirm={async () => {
-            if (operation === "verify") {
+            if (!critical || selected.id == null)
+              throw new Error("No tens permisos per fer aquesta operació.");
+            if (operation === "delete") {
+              if (selected.type !== "hacker")
+                throw new Error(
+                  "Només es poden eliminar comptes de participants.",
+                );
+              const result = await request<{
+                success: boolean;
+                deleted_id: number;
+              }>(`/v1/hacker/${selected.id}`, "DELETE");
+              if (result.success !== true || result.deleted_id !== selected.id)
+                throw new Error(
+                  "No s’ha pogut confirmar l’eliminació. Actualitza el llistat abans de tornar-ho a provar.",
+                );
+              setItems((current) =>
+                current.filter((user) => user.nickname !== selected.nickname),
+              );
+              setSelected(null);
+              setOperation(null);
+            } else if (operation === "verify") {
               await request(`/v1/auth/force-verify/${selected.id}`, "POST");
               setSelected({ ...selected, is_verified: true });
             } else {
