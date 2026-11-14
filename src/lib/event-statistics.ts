@@ -1,6 +1,7 @@
 import type { HackerProfile } from "./api";
 import { normalizeSearch } from "./search";
 import { studyCenter } from "./study-centers";
+import { dietaryLabels, groupDietaryResponses } from "./dietary";
 
 export const statisticLabels: Record<string, string> = {
   food_restrictions: "Intoleràncies i restriccions alimentàries",
@@ -34,6 +35,18 @@ export function groupEventStatistics(data: unknown): unknown {
       if (!Array.isArray(values) && (!values || typeof values !== "object"))
         return [field, values];
       const groups = new Map<string, { label: string; count: number }>();
+      if (field === "food_restrictions")
+        return [
+          field,
+          Object.fromEntries(
+            groupDietaryResponses(
+              entries.map(([value, count]) => ({
+                restriction: typeof value === "string" ? value : "",
+                count,
+              })),
+            ).map(({ label, count }) => [label, count]),
+          ),
+        ];
       for (const [value, count] of entries) {
         const label = statisticValueLabel(field, value);
         const key = normalizeSearch(label);
@@ -88,14 +101,16 @@ export function participantStatistics(participants: StatisticsParticipant[]) {
     for (const person of unique) {
       if (field === "food_restrictions" && person.confirmed_assistance !== true)
         continue;
-      const label = statisticValueLabel(
-        field,
-        person[field as keyof HackerProfile],
-      );
-      const key = normalizeSearch(label);
-      const group = groups.get(key) ?? { label, participants: [] };
-      group.participants.push(person);
-      groups.set(key, group);
+      const labels =
+        field === "food_restrictions"
+          ? dietaryLabels(person.food_restrictions)
+          : [statisticValueLabel(field, person[field as keyof HackerProfile])];
+      for (const label of labels) {
+        const key = normalizeSearch(label);
+        const group = groups.get(key) ?? { label, participants: [] };
+        group.participants.push(person);
+        groups.set(key, group);
+      }
     }
     return {
       field,

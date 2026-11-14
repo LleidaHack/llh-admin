@@ -46,7 +46,12 @@ export function StatisticsGroups({
               <CardTitle>{category.label}</CardTitle>
               {category.field === "food_restrictions" && (
                 <p className="text-sm text-muted-foreground">
-                  Només acceptats amb assistència confirmada.
+                  Només acceptats amb assistència confirmada. Una persona pot
+                  comptar en diverses categories: no en sumis els totals.
+                  Consulta la resposta original a «Veure més» abans de preparar
+                  els àpats. Les agrupacions no distingeixen al·lèrgies
+                  d’intoleràncies; confirma les respostes ambigües amb cada
+                  persona.
                 </p>
               )}
             </CardHeader>
