@@ -23,6 +23,8 @@ const ACTIONS: Record<string, string> = {
   accept: "Ha acceptat",
   unaccept: "Ha retirat l'acceptació de",
   reject: "Ha rebutjat",
+  release_reminder_sent: "Ha enviat el recordatori d’alliberar plaça a",
+  cancel_assistance: "Ha cancel·lat la plaça de",
 };
 
 export function AuditLogTab({
