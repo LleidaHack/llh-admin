@@ -61,6 +61,7 @@ export type Participant = {
   has_cv?: boolean;
   // Only meaningful for accepted participants.
   confirmed_assistance?: boolean;
+  release_reminder_sent_at?: string | null;
   // Optional application fields the backend may include in the participants list.
   description?: string | null;
   cv?: string | null;

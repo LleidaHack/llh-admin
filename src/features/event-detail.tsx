@@ -1,6 +1,7 @@
 "use client";
 import { EventMentors } from "./event-mentors";
 import { CompanyPortalAccess } from "./company-portal-access";
+import { needsReleaseReminder } from "@/lib/release-reminder";
 import { createSequentialMailBatch } from "@/lib/mail-batch";
 import { EventCommandCenter } from "./event-command-center";
 import { EventOperations, type OperationSection } from "./event-operations";
@@ -86,7 +87,7 @@ import {
   type Meal,
   type Team,
 } from "@/lib/api";
-import { dateLabel, serverDate } from "@/lib/events";
+import { dateLabel, dateTimeLabel, serverDate } from "@/lib/events";
 import { cn } from "@/lib/utils";
 const eventMenu = [
   { label: "En directe", items: [["status", "Estat de l’esdeveniment"]] },
@@ -164,11 +165,13 @@ const STATUS_ORDER: Record<string, number> = {
   pending: 0,
   accepted: 1,
   rejected: 2,
+  cancelled: 3,
 };
 const STATUS_LABELS: Record<string, string> = {
   accepted: "Acceptat",
   pending: "Pendent",
   rejected: "Rebutjat",
+  cancelled: "Plaça cancel·lada",
 };
 const NO_CENTER = "__none__";
 // Extra status filters for accepted participants and their mail confirmation.
@@ -447,7 +450,9 @@ export function EventDetail({
   const selectedParticipants = participants.filter((p) => selected.has(p.id));
   function bulk(kind: "accept" | "reject") {
     const targets = selectedParticipants.filter((p) =>
-      kind === "accept" ? p.status !== "accepted" : p.status === "pending",
+      kind === "accept"
+        ? p.status !== "accepted" && p.status !== "cancelled"
+        : p.status === "pending",
     );
     if (!targets.length) {
       toast.error(
@@ -517,6 +522,47 @@ export function EventDetail({
     });
   }
 
+  const releaseReminderRecipients = participants.filter(needsReleaseReminder);
+  function sendReleaseReminders() {
+    const targets = [...releaseReminderRecipients];
+    const batch = createSequentialMailBatch(targets, async (participant) => {
+      const result = await request<{ sent_at: string }>(
+        `/v1/event/${id}/release-reminder/${participant.id}`,
+        "POST",
+      );
+      setParticipants((current) =>
+        current.map((p) =>
+          p.id === participant.id
+            ? { ...p, release_reminder_sent_at: result.sent_at }
+            : p,
+        ),
+      );
+    });
+    setConfirmation({
+      title: `Enviar el recordatori a ${targets.length} participants`,
+      description:
+        "S'enviarà a tots els acceptats amb assistència confirmada que encara no l'han rebut, independentment dels filtres. Els demanarà alliberar la plaça si no poden venir; no cancel·la cap plaça automàticament. Mantén aquesta finestra oberta fins que acabi.",
+      run: async () => {
+        setBusy(true);
+        try {
+          await batch((sent, total) =>
+            setConfirmation(
+              (current) =>
+                current && {
+                  ...current,
+                  description: `Correus processats: ${sent} de ${total}. Mantén aquesta finestra oberta.`,
+                },
+            ),
+          );
+          toast.success(`Recordatoris processats: ${targets.length}`);
+        } finally {
+          await loadParticipants();
+          setBusy(false);
+        }
+      },
+    });
+  }
+
   function exportCsv() {
     const rows = filtered.map((p) => [
       p.id,
@@ -527,6 +573,7 @@ export function EventDetail({
       studyCenter(p.study_center)?.label ?? "",
       p.study_center,
       p.registered_at,
+      p.release_reminder_sent_at ?? "",
       hasCv(p) ? "Sí" : "No",
       p.notes_count ?? 0,
       p.age_at_event ?? "",
@@ -544,6 +591,7 @@ export function EventDetail({
           "Centre d'estudis",
           "Centre d'estudis (com l'han escrit)",
           "Data d'inscripció",
+          "Recordatori d’alliberar plaça enviat",
           "CV",
           "Notes",
           "Edat a l’inici de l’esdeveniment",
@@ -789,6 +837,17 @@ export function EventDetail({
               </Button>
               <Button
                 variant="outline"
+                disabled={
+                  !releaseReminderRecipients.length || busy || event?.archived
+                }
+                onClick={sendReleaseReminders}
+              >
+                <Send data-icon="inline-start" />
+                Enviar recordatori d’alliberar plaça (
+                {releaseReminderRecipients.length})
+              </Button>
+              <Button
+                variant="outline"
                 disabled={!filtered.length}
                 onClick={exportCsv}
               >
@@ -943,6 +1002,16 @@ export function EventDetail({
                               : "Sense confirmar"}
                           </Badge>
                         )}
+                      {p.release_reminder_sent_at && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Recordatori d’alliberar plaça enviat ·{" "}
+                          {dateTimeLabel(
+                            serverDate(
+                              p.release_reminder_sent_at,
+                            ).toISOString(),
+                          )}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
@@ -962,20 +1031,21 @@ export function EventDetail({
                             CV
                           </Button>
                         )}
-                        {p.status !== "accepted" && (
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              confirm(
-                                `Acceptar ${p.name}`,
-                                `/v1/event/${id}/accept/${p.id}`,
-                              )
-                            }
-                          >
-                            Acceptar
-                          </Button>
-                        )}
+                        {p.status !== "accepted" &&
+                          p.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={() =>
+                                confirm(
+                                  `Acceptar ${p.name}`,
+                                  `/v1/event/${id}/accept/${p.id}`,
+                                )
+                              }
+                            >
+                              Acceptar
+                            </Button>
+                          )}
                         {p.status === "accepted" && (
                           <Button
                             variant="outline"

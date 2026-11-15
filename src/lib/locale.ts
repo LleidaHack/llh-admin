@@ -117,6 +117,13 @@ const messages: Record<string, string> = {
   "user not registered": "Aquest usuari no està inscrit a l'esdeveniment.",
   "hacker not accepted":
     "Cal acceptar el participant abans de registrar-ne l'arribada.",
+  "release reminder requires confirmed attendance":
+    "El recordatori només es pot enviar a participants amb plaça activa i assistència confirmada.",
+  "unable to verify mail delivery":
+    "No s’ha pogut confirmar l’enviament del correu. Torna a consultar l’estat abans de continuar.",
+  "place cancelled": "Aquest participant ha cancel·lat la seva plaça.",
+  "cannot cancel after check-in":
+    "No es pot cancel·lar la plaça després del check-in.",
   "user not accepted": "Aquest usuari encara no està acceptat.",
   "hacker not participating":
     "Aquest participant encara no ha registrat l'arribada.",
