@@ -1,4 +1,5 @@
 "use client";
+import { ActivityRanking } from "./activity-ranking";
 import { CsvImport } from "@/components/csv-import";
 import { importChallenges } from "@/lib/csv-import";
 
@@ -28,6 +29,7 @@ const labels: Record<string, string> = {
   cost: "Cost",
   stock: "Unitats disponibles",
   published: "Publicat",
+  timed: "Registrar temps i rànquing (millor intent)",
   paused: "En pausa",
   url: "Enllaç",
 };
@@ -55,6 +57,7 @@ const templates: Record<string, Item> = {
     end: "",
     location: "",
     points: 0,
+    timed: false,
     published: true,
   },
   faqs: { question: "", answer: "" },
@@ -115,6 +118,10 @@ export function EventOperations({
     reason: "",
     round: 1,
   });
+  const [scanDuration, setScanDuration] = useState("");
+  const timedScan =
+    scan.kind === "activity" &&
+    data?.activities?.some((a: Item) => a.id === scan.target && a.timed);
   const [alert, setAlert] = useState({
     title: "",
     message: "",
@@ -717,6 +724,9 @@ export function EventOperations({
             ))}
         </form>
       )}
+      {tab === "activities" && (
+        <ActivityRanking eventId={id} activities={data.activities || []} />
+      )}
       {tab === "meals" && (
         <div className="space-y-4">
           <p>
@@ -800,6 +810,9 @@ export function EventOperations({
               ...scan,
               amount: scan.kind === "award" ? scan.amount : 0,
               device: "llh-admin",
+              ...(timedScan
+                ? { duration_ms: Math.round(Number(scanDuration) * 1000) }
+                : {}),
             };
             // Reuse the operation_id when the same request is resent after a
             // failure, so a lost response cannot apply the operation twice.
@@ -815,6 +828,7 @@ export function EventOperations({
                 });
                 scanAttempt.current = null;
                 setScan((s) => ({ ...s, code: "" }));
+                setScanDuration("");
                 return result;
               } catch (e) {
                 // Definitive rejections get a fresh id on the next attempt;
@@ -832,7 +846,10 @@ export function EventOperations({
             <select
               className="block w-full border p-2"
               value={scan.kind}
-              onChange={(e) => setScan({ ...scan, kind: e.target.value })}
+              onChange={(e) => {
+                setScan({ ...scan, kind: e.target.value });
+                setScanDuration("");
+              }}
             >
               {data.access_role === "superadmin" && (
                 <option value="award">Atorgar LleidaCoins</option>
@@ -875,7 +892,10 @@ export function EventOperations({
               <Input
                 required
                 value={scan.target}
-                onChange={(e) => setScan({ ...scan, target: e.target.value })}
+                onChange={(e) => {
+                  setScan({ ...scan, target: e.target.value });
+                  setScanDuration("");
+                }}
               />
             </label>
           ) : (
@@ -885,7 +905,10 @@ export function EventOperations({
                 required
                 className="block w-full border p-2"
                 value={scan.target}
-                onChange={(e) => setScan({ ...scan, target: e.target.value })}
+                onChange={(e) => {
+                  setScan({ ...scan, target: e.target.value });
+                  setScanDuration("");
+                }}
               >
                 <option value="">Selecciona…</option>
                 {data[scan.kind === "redeem" ? "prizes" : "activities"].map(
@@ -897,6 +920,20 @@ export function EventOperations({
                   ),
                 )}
               </select>
+            </label>
+          )}
+          {timedScan && (
+            <label>
+              Temps de l’intent (segons)
+              <Input
+                type="number"
+                min="0.001"
+                max="3600"
+                step="0.001"
+                required
+                value={scanDuration}
+                onChange={(e) => setScanDuration(e.target.value)}
+              />
             </label>
           )}
           <label>
@@ -1327,6 +1364,15 @@ export function EventOperations({
                 Participant {a.participant_name || a.user_id || "—"}
               </summary>
               <p>Punt de lectura: {a.device || "Panel"}</p>
+              {a.details.duration_ms != null && (
+                <p>
+                  Temps:{" "}
+                  {(a.details.duration_ms / 1000).toLocaleString("ca", {
+                    maximumFractionDigits: 3,
+                  })}{" "}
+                  s · Activitat: {a.details.target}
+                </p>
+              )}
               <p>Motiu: {a.details.reason || a.result.error || "—"}</p>
               {a.scans?.map((s: Item) => (
                 <p key={s.id}>
