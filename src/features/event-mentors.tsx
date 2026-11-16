@@ -11,10 +11,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ErrorBox } from "@/components/shared";
-type Mentor = { id: number; name: string; active: boolean; has_badge: boolean };
+type Mentor = {
+  id: number;
+  name: string;
+  email?: string | null;
+  active: boolean;
+  has_badge: boolean;
+};
 export function EventMentors({ base }: { base: string }) {
   const [items, setItems] = useState<Mentor[]>([]),
     [name, setName] = useState(""),
+    [email, setEmail] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const [userId, setUserId] = useState("");
@@ -57,8 +64,8 @@ export function EventMentors({ base }: { base: string }) {
           label="Importar mentors des de CSV"
           disabled={busy}
           template={[
-            ["name", "user_id"],
-            ["Mentor de mostra", ""],
+            ["name", "email", "user_id"],
+            ["Mentor de mostra", "mentor@example.com", ""],
           ]}
           validate={(rows) => {
             importMentors(
@@ -96,9 +103,11 @@ export function EventMentors({ base }: { base: string }) {
             void run(async () => {
               await request(base + "/mentors", "POST", {
                 name,
+                ...(email ? { email } : {}),
                 ...(userId ? { user_id: Number(userId) } : {}),
               });
               setName("");
+              setEmail("");
               setUserId("");
             });
           }}
@@ -111,6 +120,16 @@ export function EventMentors({ base }: { base: string }) {
               maxLength={150}
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label>
+            Correu per a la invitació
+            <Input
+              type="email"
+              maxLength={254}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="mentor@example.com"
             />
           </label>
           <label>
@@ -139,7 +158,8 @@ export function EventMentors({ base }: { base: string }) {
         </form>
         <p className="text-sm text-muted-foreground">
           Pots crear una fitxa només per a l’acreditació o vincular un compte
-          que ja tingui el rol mentor.
+          que ja tingui el rol mentor. El correu d’invitació no modifica les
+          dades d’inici de sessió. Els enviaments es gestionen a Comunicació.
         </p>
         {items.map((item) => (
           <div
@@ -151,6 +171,35 @@ export function EventMentors({ base }: { base: string }) {
               {item.has_badge ? "Acreditació vinculada" : "Sense acreditació"}
               {!item.active && " · Inactiu"}
             </span>
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const value = String(
+                  new FormData(e.currentTarget).get("email") || "",
+                ).trim();
+                void run(() =>
+                  request(`${base}/mentors/${item.id}`, "PATCH", {
+                    email: value || null,
+                  }),
+                );
+              }}
+            >
+              <label className="text-sm">
+                Correu d’invitació de {item.name}
+                <Input
+                  key={`${item.id}:${item.email || ""}`}
+                  name="email"
+                  type="email"
+                  maxLength={254}
+                  defaultValue={item.email || ""}
+                  placeholder="Sense correu"
+                />
+              </label>
+              <Button variant="outline" disabled={busy} type="submit">
+                Desar correu
+              </Button>
+            </form>
             <Button
               variant="outline"
               disabled={busy}

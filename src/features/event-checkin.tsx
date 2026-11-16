@@ -10,6 +10,10 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -36,6 +40,24 @@ import {
 // (DB-backed counts) while it reports running.
 export function TicketsCard({ id }: { id: number }) {
   const [status, setStatus] = useState<TicketsStatus | null>(null);
+  const [audience, setAudience] = useState("all");
+  const selectedGroup =
+    audience === "all"
+      ? null
+      : status?.groups?.[
+          { hacker: "Hacker", mentor: "Mentor", staff: "Staff" }[audience]!
+        ];
+  const eligible =
+    selectedGroup?.eligible ??
+    (audience === "all" ? (status?.eligible ?? 0) : 0);
+  const sent =
+    selectedGroup?.sent ?? (audience === "all" ? (status?.sent ?? 0) : 0);
+  const pending = eligible - sent;
+  const selectedRecipients = status?.recipients?.filter(
+    (recipient) =>
+      audience === "all" || recipient.role.toLowerCase() === audience,
+  );
+
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<{
     title: string;
@@ -68,11 +90,11 @@ export function TicketsCard({ id }: { id: number }) {
         ? "Reenviar els tiquets a tothom"
         : "Generar els tiquets de l'esdeveniment",
       description: force
-        ? `Es tornarà a enviar el correu amb el QR de check-in als ${status?.eligible ?? 0} participants acceptats i confirmats, encara que ja l'hagin rebut. Aquesta acció envia correus reals.`
-        : `S'enviarà el correu amb el QR de check-in als ${status?.pending ?? 0} participants acceptats i confirmats que encara no l'han rebut. Aquesta acció envia correus reals.`,
+        ? `Es tornarà a enviar el correu amb el QR de check-in als ${eligible} destinataris del grup seleccionat, encara que ja l'hagin rebut. Aquesta acció envia correus reals.`
+        : `S'enviarà el correu amb el QR de check-in als ${pending} destinataris del grup seleccionat que encara no l'han rebut. Aquesta acció envia correus reals.`,
       run: async () => {
         await request(
-          `/v1/event/${id}/tickets/send${force ? "?force=true" : ""}`,
+          `/v1/event/${id}/tickets/send?audience=${audience}${force ? "&force=true" : ""}`,
           "POST",
         );
         await load();
@@ -84,20 +106,59 @@ export function TicketsCard({ id }: { id: number }) {
       <CardHeader>
         <CardTitle>Tiquets d&apos;entrada</CardTitle>
         <CardDescription>
-          Genera&apos;ls amb les inscripcions tancades. Cada confirmat rep el
-          seu QR per correu.
+          Envia el QR i l’enllaç personal a l’entrada als participants acceptats
+          i confirmats, als mentors actius i al staff (LleidaHack, admin i
+          superadmin).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <ErrorBox error={error} />
+        <label className="text-sm font-medium">
+          Destinataris
+          <NativeSelect
+            value={audience}
+            onChange={(e) => setAudience(e.target.value)}
+            disabled={status?.running}
+          >
+            <NativeSelectOption value="all">Tothom</NativeSelectOption>
+            <NativeSelectOption value="hacker">
+              Participants confirmats
+            </NativeSelectOption>
+            <NativeSelectOption value="mentor">
+              Mentors actius
+            </NativeSelectOption>
+            <NativeSelectOption value="staff">Staff</NativeSelectOption>
+          </NativeSelect>
+        </label>
+        {(status?.missing_email ?? 0) > 0 && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Hi ha {status?.missing_email} persones sense correu. No rebran la
+            invitació fins que l’afegiu. Els correus dels mentors es poden
+            completar a la pestanya Mentors.
+          </p>
+        )}
+        {selectedRecipients && (
+          <details>
+            <summary className="cursor-pointer text-sm">
+              Revisar destinataris ({selectedRecipients.length})
+            </summary>
+            <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto text-sm">
+              {selectedRecipients.map((recipient) => (
+                <li key={recipient.id}>
+                  <strong>{recipient.name}</strong> · {recipient.role} ·{" "}
+                  {recipient.email || "Sense correu"} ·{" "}
+                  {recipient.sent ? "Enviat" : "Pendent"}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         {status && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">
-              Amb dret a tiquet: {status.eligible}
-            </Badge>
-            <Badge variant="secondary">Enviats: {status.sent}</Badge>
-            <Badge variant={status.pending ? "default" : "secondary"}>
-              Pendents: {status.pending}
+            <Badge variant="secondary">Amb correu: {eligible}</Badge>
+            <Badge variant="secondary">Enviats: {sent}</Badge>
+            <Badge variant={pending ? "default" : "secondary"}>
+              Pendents: {pending}
             </Badge>
             {status.running && (
               <Badge>
@@ -116,17 +177,17 @@ export function TicketsCard({ id }: { id: number }) {
         <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => send(false)}
-            disabled={!status || status.running || status.pending === 0}
+            disabled={!status || status.running || pending === 0}
           >
             <Ticket data-icon="inline-start" />
-            Generar tiquets de l&apos;esdeveniment
+            Enviar entrades pendents
           </Button>
           <Button
             variant="outline"
             onClick={() => send(true)}
-            disabled={!status || status.running || status.eligible === 0}
+            disabled={!status || status.running || eligible === 0}
           >
-            Reenviar a tothom
+            Reenviar al grup seleccionat
           </Button>
           <Button
             variant="ghost"
@@ -137,9 +198,9 @@ export function TicketsCard({ id }: { id: number }) {
             Actualitzar
           </Button>
         </div>
-        {status && status.eligible === 0 && (
+        {status && eligible === 0 && (
           <p className="text-sm text-muted-foreground">
-            Encara no hi ha cap participant acceptat i confirmat.
+            No hi ha destinataris amb correu en aquest grup.
           </p>
         )}
       </CardContent>
