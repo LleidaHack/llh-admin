@@ -829,25 +829,6 @@ export function EventDetail({
               />
               <Button
                 variant="outline"
-                disabled={!unconfirmed.length || busy}
-                onClick={resendUnconfirmed}
-              >
-                <Send data-icon="inline-start" />
-                Reenviar als no confirmats ({unconfirmed.length})
-              </Button>
-              <Button
-                variant="outline"
-                disabled={
-                  !releaseReminderRecipients.length || busy || event?.archived
-                }
-                onClick={sendReleaseReminders}
-              >
-                <Send data-icon="inline-start" />
-                Enviar recordatori d’alliberar plaça (
-                {releaseReminderRecipients.length})
-              </Button>
-              <Button
-                variant="outline"
                 disabled={!filtered.length}
                 onClick={exportCsv}
               >
@@ -1420,6 +1401,36 @@ export function EventDetail({
           <VouchersCard id={id} />
         </TabsContent>
         <TabsContent value="comms" className="flex flex-col gap-5 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Confirmació d’assistència</CardTitle>
+              <CardDescription>
+                Correus als participants acceptats per confirmar l’assistència o
+                recordar-los que alliberin la plaça si no poden venir.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                disabled={!unconfirmed.length || busy}
+                onClick={resendUnconfirmed}
+              >
+                <Send data-icon="inline-start" />
+                Reenviar als no confirmats ({unconfirmed.length})
+              </Button>
+              <Button
+                variant="outline"
+                disabled={
+                  !releaseReminderRecipients.length || busy || event?.archived
+                }
+                onClick={sendReleaseReminders}
+              >
+                <Send data-icon="inline-start" />
+                Enviar recordatori d’alliberar plaça (
+                {releaseReminderRecipients.length})
+              </Button>
+            </CardContent>
+          </Card>
           <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
