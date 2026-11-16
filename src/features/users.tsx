@@ -1,3 +1,4 @@
+import { UserPasswordReset } from "./user-password-reset";
 import { NicknameModeration } from "./nickname-moderation";
 import { useCanRunCritical } from "@/lib/viewer";
 import {
@@ -197,6 +198,10 @@ export function Users() {
                 <span className="text-sm">
                   ID: {selected.id} · Codi: {selected.code}
                 </span>
+                <UserPasswordReset
+                  key={selected.id ?? selected.nickname}
+                  user={selected}
+                />
                 {critical &&
                   selected.is_verified === false &&
                   selected.id != null && (
