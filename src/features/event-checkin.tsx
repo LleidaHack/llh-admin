@@ -41,6 +41,16 @@ import {
 export function TicketsCard({ id }: { id: number }) {
   const [status, setStatus] = useState<TicketsStatus | null>(null);
   const [audience, setAudience] = useState("all");
+  const [recipientId, setRecipientId] = useState("");
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const recipient = status?.recipients?.find(
+    (item) => String(item.id) === recipientId,
+  );
+  const matchingRecipients = status?.recipients?.filter((item) =>
+    `${item.name} ${item.email ?? ""}`
+      .toLocaleLowerCase()
+      .includes(recipientSearch.toLocaleLowerCase()),
+  );
   const selectedGroup =
     audience === "all"
       ? null
@@ -101,6 +111,23 @@ export function TicketsCard({ id }: { id: number }) {
       },
     });
 
+  const sendIndividual = () => {
+    if (!recipient?.email) return;
+    setConfirmation({
+      title: recipient.sent
+        ? "Reenviar aquesta entrada"
+        : "Enviar aquesta entrada",
+      description: `S'enviarà un únic correu a ${recipient.name} (${recipient.email}), amb la seva entrada de ${recipient.role}.`,
+      run: async () => {
+        await request(
+          `/v1/event/${id}/tickets/send?user_id=${recipient.id}${recipient.sent ? "&force=true" : ""}`,
+          "POST",
+        );
+        await load();
+      },
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -113,6 +140,66 @@ export function TicketsCard({ id }: { id: number }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <ErrorBox error={error} />
+        <fieldset
+          className="flex flex-col gap-3 rounded-lg border p-4"
+          disabled={!status || status.running}
+        >
+          <legend className="px-1 text-sm font-medium">
+            Enviar a una persona
+          </legend>
+          <Field>
+            <FieldLabel htmlFor={`ticket-search-${id}`}>
+              Cercar per nom o correu
+            </FieldLabel>
+            <Input
+              id={`ticket-search-${id}`}
+              value={recipientSearch}
+              onChange={(event) => {
+                setRecipientSearch(event.target.value);
+                setRecipientId("");
+              }}
+              placeholder="Nom o correu electrònic"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`ticket-recipient-${id}`}>
+              Persona destinatària
+            </FieldLabel>
+            <NativeSelect
+              id={`ticket-recipient-${id}`}
+              value={recipientId}
+              onChange={(event) => setRecipientId(event.target.value)}
+            >
+              <NativeSelectOption value="">
+                Selecciona una persona
+              </NativeSelectOption>
+              {matchingRecipients?.map((item) => (
+                <NativeSelectOption
+                  key={item.id}
+                  value={String(item.id)}
+                  disabled={!item.email}
+                >
+                  {item.name} · {item.role} · {item.email || "Sense correu"}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Field>
+          {matchingRecipients?.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No hi ha cap destinatari elegible amb aquesta cerca.
+            </p>
+          )}
+          <Button
+            className="self-start"
+            variant="outline"
+            onClick={sendIndividual}
+            disabled={!recipient?.email || !status || status.running}
+          >
+            {recipient?.sent
+              ? "Reenviar a aquesta persona"
+              : "Enviar a aquesta persona"}
+          </Button>
+        </fieldset>
         <label className="text-sm font-medium">
           Destinataris
           <NativeSelect
