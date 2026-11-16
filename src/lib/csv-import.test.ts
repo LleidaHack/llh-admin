@@ -48,11 +48,12 @@ describe("CSV imports", () => {
       importMentors([{ name: "Mentor", user_id: "43" }], [], [42]),
     ).toThrow();
     expect(() =>
-      importMentors(
-        [{ name: "Mentor", email: "ignored@example.test" }],
-        [],
-        [],
-      ),
+      importMentors([{ name: "Mentor", email: "invalid-email" }], [], []),
     ).toThrow();
+  });
+  it("imports invitation emails without requiring a login account", () => {
+    expect(
+      importMentors([{ name: "Mentor", email: "MENTOR@example.test" }], [], []),
+    ).toEqual([{ name: "Mentor", email: "mentor@example.test" }]);
   });
 });

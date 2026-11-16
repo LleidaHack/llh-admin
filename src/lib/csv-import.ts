@@ -103,13 +103,20 @@ export function importMentors(
   const names = new Set(existingNames.map((n) => n.trim().toLocaleLowerCase()));
   const users = new Set<number>();
   return rows.map((row) => {
-    columns(row, ["name", "user_id"], ["name"]);
+    columns(row, ["name", "user_id", "email"], ["name"]);
+    const email = row.email?.trim().toLowerCase();
+    if (
+      email &&
+      (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    )
+      throw new Error(`Correu de mentor no vàlid: ${email}.`);
+    const contact = email ? { email } : {};
     if (row.name.length < 2 || row.name.length > 150)
       throw new Error("El nom ha de tenir entre 2 i 150 caràcters.");
     const name = row.name.toLocaleLowerCase();
     if (names.has(name)) throw new Error(`Mentor duplicat: ${row.name}.`);
     names.add(name);
-    if (!row.user_id) return { name: row.name };
+    if (!row.user_id) return { name: row.name, ...contact };
     const user_id = Number(row.user_id);
     if (
       !Number.isSafeInteger(user_id) ||
@@ -118,6 +125,6 @@ export function importMentors(
     )
       throw new Error(`Compte de mentor desconegut o repetit: ${row.user_id}.`);
     users.add(user_id);
-    return { name: row.name, user_id };
+    return { name: row.name, user_id, ...contact };
   });
 }

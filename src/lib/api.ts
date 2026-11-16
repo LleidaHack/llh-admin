@@ -112,6 +112,18 @@ export type Meal = {
   event_id: number;
 };
 export type TicketsStatus = {
+  missing_email?: number;
+  groups?: Record<
+    string,
+    { eligible: number; sent: number; missing_email: number }
+  >;
+  recipients?: {
+    id: number;
+    name: string;
+    email: string | null;
+    role: string;
+    sent: boolean;
+  }[];
   eligible: number;
   sent: number;
   pending: number;
