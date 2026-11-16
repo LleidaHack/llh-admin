@@ -7,6 +7,7 @@ import { EventCommandCenter } from "./event-command-center";
 import { EventOperations, type OperationSection } from "./event-operations";
 import { useCanRunCritical } from "@/lib/viewer";
 import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
+import { CreditsExport } from "./credits-export";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
 import {
@@ -835,6 +836,7 @@ export function EventDetail({
                 <Download data-icon="inline-start" />
                 CSV
               </Button>
+              <CreditsExport eventId={id} />
             </div>
           </div>
           {selected.size > 0 && (
