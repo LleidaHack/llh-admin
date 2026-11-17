@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import { ActivityRanking } from "./activity-ranking";
 import { CsvImport } from "@/components/csv-import";
 import { importChallenges } from "@/lib/csv-import";
@@ -103,7 +104,6 @@ export function EventOperations({
   const [data, setData] = useState<Item | null>(null),
     [draft, setDraft] = useState<Item | null>(null);
   const [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   const [teamQuery, setTeamQuery] = useState("");
   const [staff, setStaff] = useState<Item[]>([]);
@@ -137,7 +137,9 @@ export function EventOperations({
     deliveries: Item[];
   } | null>(null);
   const [discordCard, setDiscordCard] = useState(emptyDiscordCard);
-  const [alertMinutes, setAlertMinutes] = useState(60);
+  const [scheduled, setScheduled] = useState(false);
+  const [alertClock, setAlertClock] = useState(Date.now);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [enroll, setEnroll] = useState({
     group: "",
     challenge: "",
@@ -180,7 +182,10 @@ export function EventOperations({
         })
         .catch(() => {});
     void refresh();
-    const timer = setInterval(refresh, 5000);
+    const timer = setInterval(() => {
+      setAlertClock(Date.now());
+      void refresh();
+    }, 5000);
     return () => {
       active = false;
       clearInterval(timer);
@@ -202,11 +207,10 @@ export function EventOperations({
       return;
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       await fn();
       await load();
-      setNotice(message);
+      toast.success(message);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -245,6 +249,19 @@ export function EventOperations({
   }, [id, section]);
   if (!data || !draft)
     return <p role="status">{error || "Carregant operacions…"}</p>;
+  const pendingAlerts: Item[] = [];
+  const publishedAlerts: Item[] = [];
+  if (tab === "alerts") {
+    for (const alert of data.alerts) {
+      if (Date.parse(alert.scheduled_at) > alertClock)
+        pendingAlerts.push(alert);
+      else if (Date.parse(alert.expires_at) > alertClock)
+        publishedAlerts.push(alert);
+    }
+    pendingAlerts.sort(
+      (a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at),
+    );
+  }
   const fold = (text: string) =>
     text
       .normalize("NFD")
@@ -276,11 +293,6 @@ export function EventOperations({
           {error}
         </p>
       )}
-      {notice && (
-        <p role="status" className="rounded border border-green-600 p-3">
-          {notice}
-        </p>
-      )}
       {["live", "activities", "challenges", "prizes", "rooms"].includes(
         tab,
       ) && (
@@ -306,12 +318,7 @@ export function EventOperations({
               aria-label="Desar canvis"
             >
               <p className="min-w-0 text-sm" role={error ? "alert" : "status"}>
-                {busy
-                  ? "Desant…"
-                  : error ||
-                    (dirty
-                      ? "Canvis pendents de desar"
-                      : notice || "Configuració desada")}
+                {busy ? "Desant…" : error || "Canvis pendents de desar"}
               </p>
               {dirty && (
                 <Button type="submit" disabled={busy} className="shrink-0">
@@ -539,7 +546,7 @@ export function EventOperations({
                         );
                         update(key, [...(draft[key] || []), ...imported]);
                         progress(imported.length);
-                        setNotice(
+                        toast.success(
                           "Reptes afegits al borrador. Desa els canvis per aplicar-los.",
                         );
                       }}
@@ -949,181 +956,259 @@ export function EventOperations({
         </form>
       )}
       {tab === "alerts" && (
-        <div className="space-y-4">
-          <form
-            className="grid max-w-xl gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(
-                () =>
-                  request(base + "/alerts", "POST", {
-                    ...alert,
-                    discord_card: alert.discord
-                      ? discordCard.enabled
-                        ? {
-                            ...discordCard,
-                            url: discordCard.url || null,
-                            image_url: discordCard.image_url || null,
-                            thumbnail_url: discordCard.thumbnail_url || null,
-                          }
-                        : { enabled: false }
-                      : undefined,
-                    expires_at: new Date(
-                      Date.now() + alertMinutes * 60000,
-                    ).toISOString(),
-                  }),
-                "Avís desat als canals seleccionats. Consulta l’estat de Discord a sota.",
-              );
-            }}
-          >
-            <label>
-              Tipus d’avís
-              <select
-                className="block rounded border p-2"
-                value={alert.category}
-                onChange={(e) =>
-                  setAlert({ ...alert, category: e.target.value })
+        <div className="@container">
+          <div className="grid items-start gap-6 @min-[46rem]:grid-cols-2">
+            <form
+              className="grid min-w-0 gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const startsAt = scheduled
+                  ? new Date(scheduledAt).getTime()
+                  : Date.now();
+                if (
+                  scheduled &&
+                  (!Number.isFinite(startsAt) ||
+                    startsAt <= Date.now() ||
+                    localDate(new Date(startsAt).toISOString()) !== scheduledAt)
+                ) {
+                  setError("Tria una data i hora local vàlida en el futur.");
+                  return;
                 }
-              >
-                <option value="general">General</option>
-                <option value="activity">Activitat</option>
-                <option value="meal">Àpat</option>
-              </select>
-            </label>
-            <label>
-              Visible durant (minuts)
-              <Input
-                type="number"
-                min={1}
-                max={1440}
-                value={alertMinutes}
-                onChange={(e) => setAlertMinutes(Number(e.target.value))}
-              />
-            </label>
-            <fieldset className="space-y-2">
-              <legend>Destinacions</legend>
-              <label className="block">
-                <input
-                  type="checkbox"
-                  checked={alert.live}
-                  onChange={(e) =>
-                    setAlert({ ...alert, live: e.target.checked })
-                  }
-                />{" "}
-                Live i pantalles (WebSocket)
-              </label>
-              <label className="block">
-                <input
-                  type="checkbox"
-                  checked={alert.discord}
-                  onChange={(e) =>
-                    setAlert({ ...alert, discord: e.target.checked })
-                  }
-                />{" "}
-                Discord · canal oficial
-              </label>
-            </fieldset>
-            {alert.discord && !discord?.configured && (
-              <p role="status">
-                Discord no està configurat per a aquest esdeveniment. L’avís
-                quedarà pendent fins que es connecti o caduqui.
-              </p>
-            )}
-            <Input
-              required
-              placeholder="Títol"
-              maxLength={150}
-              aria-label="Títol de l'avís"
-              value={alert.title}
-              onChange={(e) => setAlert({ ...alert, title: e.target.value })}
-            />
-            <Textarea
-              required
-              placeholder="Missatge"
-              maxLength={2000}
-              aria-label="Missatge de l'avís"
-              value={alert.message}
-              onChange={(e) => setAlert({ ...alert, message: e.target.value })}
-            />
-            <label className="grid min-w-0 gap-1">
-              Nivell de l’avís
-              <select
-                value={alert.level}
-                onChange={(e) => setAlert({ ...alert, level: e.target.value })}
-              >
-                <option value="info">Informació</option>
-                <option value="warning">Important</option>
-                <option value="danger">Urgent</option>
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={alert.push}
-                onChange={(e) => setAlert({ ...alert, push: e.target.checked })}
-              />{" "}
-              Enviar també notificació push
-            </label>
-            {alert.discord && (
-              <DiscordCardEditor
-                card={discordCard}
-                onChange={setDiscordCard}
-                title={alert.title}
-                message={alert.message}
-              />
-            )}
-            <Button
-              disabled={busy || !(alert.live || alert.push || alert.discord)}
+                void run(
+                  () =>
+                    request(
+                      base + (scheduled ? "/scheduled-alerts" : "/alerts"),
+                      "POST",
+                      {
+                        scheduled_at: scheduled
+                          ? new Date(startsAt).toISOString()
+                          : undefined,
+                        ...alert,
+                        discord_card: alert.discord
+                          ? discordCard.enabled
+                            ? {
+                                ...discordCard,
+                                url: discordCard.url || null,
+                                image_url: discordCard.image_url || null,
+                                thumbnail_url:
+                                  discordCard.thumbnail_url || null,
+                              }
+                            : { enabled: false }
+                          : undefined,
+                      },
+                    ),
+                  scheduled
+                    ? "Avís programat als canals seleccionats."
+                    : "Avís desat als canals seleccionats. Consulta l’estat a Entregues a Discord.",
+                );
+              }}
             >
-              Publicar avís
-            </Button>
-          </form>
-          <section className="space-y-2">
-            <h3 className="font-semibold">Entregues a Discord</h3>
-            <p>
-              {discord?.configured
-                ? discord.mode === "webhook"
-                  ? "Webhook configurat. Consulta les confirmacions d’entrega a sota."
-                  : "Bot configurat. Consulta les confirmacions d’entrega a sota."
-                : "Integració pendent de configurar."}
-            </p>
-            {discord?.deliveries.map((d) => (
-              <p key={d.id} className="rounded border p-2">
-                Avís {d.alert_id} ·{" "}
-                {{
-                  pending: "Pendent",
-                  leased: "Enviant",
-                  sent: "Enviat",
-                  failed: "Error",
-                  expired: "Caducat",
-                  cancelled: "Cancel·lat",
-                }[d.state as string] || d.state}{" "}
-                · Intents: {d.attempts}
-                {d.message_id && ` · Missatge: ${d.message_id}`}
-                {d.error && ` · ${d.error}`}
-              </p>
-            ))}
-          </section>
-          {data.alerts.map((a: Item) => (
-            <Card key={a.id}>
-              <CardContent className="p-4">
-                <strong>{a.title}</strong>
-                <p>{a.message}</p>
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    window.confirm(
-                      "Retirar l’avís? Desapareix del Live i es cancel·len els enviaments pendents (push i Discord). Els ja enviats no es poden desfer.",
-                    ) &&
-                    void run(() => request(base + `/alerts/${a.id}`, "DELETE"))
+              <label>
+                Tipus d’avís
+                <select
+                  className="block rounded border p-2"
+                  value={alert.category}
+                  onChange={(e) =>
+                    setAlert({ ...alert, category: e.target.value })
                   }
                 >
-                  Retirar
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <option value="general">General</option>
+                  <option value="activity">Activitat</option>
+                  <option value="meal">Àpat</option>
+                </select>
+              </label>
+              <label>
+                Enviament
+                <select
+                  className="block rounded border p-2"
+                  value={scheduled ? "later" : "now"}
+                  onChange={(e) => setScheduled(e.target.value === "later")}
+                >
+                  <option value="now">Publicar ara</option>
+                  <option value="later">Programar enviament</option>
+                </select>
+              </label>
+              {scheduled && (
+                <label>
+                  Data i hora (
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone})
+                  <Input
+                    type="datetime-local"
+                    required
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                  />
+                </label>
+              )}
+              <fieldset className="space-y-2">
+                <legend>Destinacions</legend>
+                <label className="block">
+                  <input
+                    type="checkbox"
+                    checked={alert.live}
+                    onChange={(e) =>
+                      setAlert({ ...alert, live: e.target.checked })
+                    }
+                  />{" "}
+                  Live i pantalles (WebSocket)
+                </label>
+                <label className="block">
+                  <input
+                    type="checkbox"
+                    checked={alert.discord}
+                    onChange={(e) =>
+                      setAlert({ ...alert, discord: e.target.checked })
+                    }
+                  />{" "}
+                  Discord · canal oficial
+                </label>
+              </fieldset>
+              {alert.discord && !discord?.configured && (
+                <p role="status">
+                  Discord no està configurat per a aquest esdeveniment. L’avís
+                  quedarà pendent fins que es connecti o caduqui.
+                </p>
+              )}
+              <Input
+                required
+                placeholder="Títol"
+                maxLength={150}
+                aria-label="Títol de l'avís"
+                value={alert.title}
+                onChange={(e) => setAlert({ ...alert, title: e.target.value })}
+              />
+              <Textarea
+                required
+                placeholder="Missatge"
+                maxLength={2000}
+                aria-label="Missatge de l'avís"
+                value={alert.message}
+                onChange={(e) =>
+                  setAlert({ ...alert, message: e.target.value })
+                }
+              />
+              <label className="grid min-w-0 gap-1">
+                Nivell de l’avís
+                <select
+                  value={alert.level}
+                  onChange={(e) =>
+                    setAlert({ ...alert, level: e.target.value })
+                  }
+                >
+                  <option value="info">Informació</option>
+                  <option value="warning">Important</option>
+                  <option value="danger">Urgent</option>
+                </select>
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={alert.push}
+                  onChange={(e) =>
+                    setAlert({ ...alert, push: e.target.checked })
+                  }
+                />{" "}
+                Enviar també notificació push
+              </label>
+              {alert.discord && (
+                <DiscordCardEditor
+                  card={discordCard}
+                  onChange={setDiscordCard}
+                  title={alert.title}
+                  message={alert.message}
+                />
+              )}
+              <Button
+                disabled={busy || !(alert.live || alert.push || alert.discord)}
+              >
+                {scheduled ? "Programar avís" : "Publicar avís"}
+              </Button>
+            </form>
+            <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
+              {[
+                {
+                  title: "Enviaments programats",
+                  items: pendingAlerts,
+                  empty: "Cap enviament programat.",
+                },
+                {
+                  title: "Avisos publicats",
+                  items: publishedAlerts,
+                  empty: "Cap avís recent.",
+                },
+              ].map(({ title, items, empty }) => (
+                <section key={title} className="space-y-2">
+                  <h3 className="font-semibold">
+                    {title} ({items.length})
+                  </h3>
+                  {!items.length && (
+                    <p className="text-sm text-muted-foreground">{empty}</p>
+                  )}
+                  {items.map((a: Item) => (
+                    <Card key={a.id}>
+                      <CardContent className="p-4">
+                        <strong>{a.title}</strong>
+                        <p>{a.message}</p>
+                        <p>
+                          {new Date(
+                            a.scheduled_at || a.created_at,
+                          ).toLocaleString("ca-ES")}{" "}
+                          ·{" "}
+                          {[
+                            a.live && "Live",
+                            a.discord && "Discord",
+                            a.push && "Push",
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                        <Button
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() =>
+                            window.confirm(
+                              "Retirar l’avís? Desapareix del Live i es cancel·len els enviaments pendents (push i Discord). Els ja enviats no es poden desfer.",
+                            ) &&
+                            void run(() =>
+                              request(base + `/alerts/${a.id}`, "DELETE"),
+                            )
+                          }
+                        >
+                          Retirar
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </section>
+              ))}
+              <section className="space-y-2">
+                <h3 className="font-semibold">Entregues a Discord</h3>
+                <p>
+                  {discord?.configured
+                    ? discord.mode === "webhook"
+                      ? "Webhook configurat. Consulta les confirmacions d’entrega a sota."
+                      : "Bot configurat. Consulta les confirmacions d’entrega a sota."
+                    : "Integració pendent de configurar."}
+                </p>
+                {discord?.deliveries.map((d) => (
+                  <p key={d.id} className="rounded border p-2">
+                    Avís {d.alert_id} ·{" "}
+                    {{
+                      pending: "Pendent",
+                      leased: "Enviant",
+                      sent: "Enviat",
+                      failed: "Error",
+                      expired: "Caducat",
+                      cancelled: "Cancel·lat",
+                    }[d.state as string] || d.state}{" "}
+                    · Intents: {d.attempts}
+                    {d.message_id && ` · Missatge: ${d.message_id}`}
+                    {d.error && ` · ${d.error}`}
+                  </p>
+                ))}
+              </section>
+            </div>
+          </div>
         </div>
       )}
       {tab === "devpost" && (

@@ -252,11 +252,11 @@ export async function request<T>(
       (data as { detail?: unknown; message?: unknown })?.detail ??
       (data as { message?: unknown })?.message;
     const message = serverError(status === 403 ? undefined : detail, status);
-    const reference = (data as { request_id?: unknown })?.request_id;
+    const reference =
+      (data as { request_id?: unknown })?.request_id ??
+      response.headers.get("x-request-id");
     const suffix =
-      status >= 500 &&
-      typeof reference === "string" &&
-      /^[0-9a-f-]{36}$/i.test(reference)
+      typeof reference === "string" && /^[0-9a-f-]{36}$/i.test(reference)
         ? ` Referència: ${reference}`
         : "";
     throw new ApiError(status, message + suffix);

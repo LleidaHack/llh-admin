@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useEffect, useRef, useState } from "react";
 import { request, errorMessage } from "@/lib/api";
@@ -7,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Project = {
+  id: number;
+  submitted_team_code: string;
   url: string;
   title: string;
-  group_id: number;
+  group_id: number | null;
   challenge: string;
   mlh: boolean;
 };
@@ -22,6 +25,7 @@ type Row = {
   action: string;
   challenge?: string;
   mlh?: boolean;
+  ribo_prize?: boolean;
   errors: string[];
   warnings: string[];
 };
@@ -39,10 +43,13 @@ const fields: Record<string, string> = {
   url: "URL del projecte",
   title: "Nom del projecte",
   description: "Descripció (opcional)",
+  try_links: "Enllaços Try it out (opcional)",
+  gallery: "Galeria d’imatges (opcional)",
+  technologies: "Tecnologies (opcional)",
   repository_url: "Repositori (opcional)",
   demo_url: "Demo / vídeo (opcional)",
   team: "Codi d’equip HackEPS",
-  challenge: "Repte",
+  challenge: "Repte (sense columna, s’utilitza el del perfil)",
   mlh: "MLH (opcional)",
   status: "Estat de l’entrega",
 };
@@ -62,6 +69,10 @@ const messages: Record<string, string> = {
     "Indica almenys un estat d’entrega completa.",
   "Select the url column": "Selecciona la columna de l’URL.",
   "Select the title column": "Selecciona la columna del nom del projecte.",
+  "Project or team already linked":
+    "El projecte o l’equip ja estan vinculats. Actualitza la llista.",
+  "Select a published challenge with a room":
+    "Tria un repte publicat que tingui sala assignada.",
   "Select the team column": "Selecciona la columna del codi d’equip.",
   "Select the challenge column": "Selecciona la columna del repte.",
   "Select the status column or confirm this export excludes drafts":
@@ -88,8 +99,8 @@ const messages: Record<string, string> = {
   "Configure the MLH room first": "Configura primer la sala MLH.",
   "Project title must contain 1–150 characters":
     "El nom del projecte ha de tenir entre 1 i 150 caràcters.",
-  "Expected an https://devpost.com/software/... project URL":
-    "Cal un enllaç de projecte https://devpost.com/software/…",
+  "Expected a Devpost project or submission URL":
+    "Cal un enllaç de projecte o entrega de Devpost.",
 };
 const explain = (message: string) => messages[message] || message;
 
@@ -106,19 +117,26 @@ export function DevpostImport({
 }) {
   const base = `/v1/operations/${eventId}/devpost`;
   const [csv, setCsv] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
   const [filename, setFilename] = useState("");
   const [columns, setColumns] = useState<Record<string, string>>({});
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [headers, setHeaders] = useState<string[]>([]);
   const [values, setValues] = useState<string[]>([]);
-  const [statuses, setStatuses] = useState("submitted, complete, completed");
+  const [statuses, setStatuses] = useState(
+    "submitted, complete, completed, Submitted (Gallery/Visible)",
+  );
   const [completedOnly, setCompletedOnly] = useState(false);
   const [plan, setPlan] = useState<Preview | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [assignment, setAssignment] = useState<
+    Record<number, { team?: string; challenge?: string }>
+  >({});
+  const pending = projects.filter((p) => p.group_id === null);
+  const linked = projects.filter((p) => p.group_id !== null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const operationId = useRef("");
   const load = () => request<Project[]>(base + "/projects").then(setProjects);
   useEffect(() => {
@@ -126,9 +144,27 @@ export function DevpostImport({
       .then(setProjects)
       .catch((e) => setError(explain(errorMessage(e))));
   }, [base]);
+  async function assign(project: Project) {
+    const selection = assignment[project.id];
+    if (!selection?.team) return;
+    setBusy(true);
+    setError("");
+    try {
+      await request(`${base}/projects/${project.id}/team`, "PUT", {
+        group_id: Number(selection.team),
+        challenge: selection.challenge ?? project.challenge,
+      });
+      toast.success("Projecte vinculat a l’equip.");
+      await load();
+      await onImported();
+    } catch (e) {
+      setError(explain(errorMessage(e)));
+    } finally {
+      setBusy(false);
+    }
+  }
   function invalidate() {
     setPlan(null);
-    setNotice("");
     operationId.current = "";
   }
   const payload = () => ({
@@ -208,6 +244,7 @@ export function DevpostImport({
     try {
       const result = await request<{
         imported: number;
+        pending: number;
         created_turns: number;
         skipped: number;
         audit_id: number;
@@ -218,8 +255,8 @@ export function DevpostImport({
         operation_id: operationId.current,
       });
       setPlan(null);
-      setNotice(
-        `${result.imported} projectes importats · ${result.created_turns} torns nous · ${result.skipped} files excloses · Registre #${result.audit_id}.`,
+      toast.success(
+        `${result.imported} projectes importats · ${result.pending} pendents de vincular · ${result.created_turns} torns nous · ${result.skipped} files excloses · Registre #${result.audit_id}.`,
       );
       await load();
       await onImported();
@@ -231,27 +268,40 @@ export function DevpostImport({
   }
   return (
     <div className="space-y-5">
-      <Card>
+      {error && (
+        <p role="alert" className="text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          aria-expanded={importOpen}
+          aria-controls="devpost-import"
+          onClick={() => setImportOpen(!importOpen)}
+        >
+          {importOpen ? "Tancar importació" : "Importar de Devpost"}
+        </Button>
+      </div>
+      <Card id="devpost-import" hidden={!importOpen}>
         <CardHeader>
           <CardTitle>Importar projectes de Devpost</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Exporta el CSV des de Devpost → Manage → Metrics → Projects data. El
-            formulari de Devpost ha d’incloure el codi d’equip HackEPS, el repte
-            i, opcionalment, MLH.
+            formulari de Devpost ha d’incloure el camp TeamID amb el codi
+            d’equip HackEPS, amb o sense #. Si falta o no coincideix, podràs
+            vincular el projecte després de la importació. Si el CSV no inclou
+            el repte, es fa servir el que l’equip ha triat al perfil. La columna
+            MLH és opcional.
           </p>
           <p className="text-sm">
-            Els equips nous tindran un torn del repte i un altre de MLH si hi
-            participen. Els torns existents es conserven. Després pots generar
-            els horaris a Presentacions.
+            Els equips nous tindran un torn del repte i un torn addicional per
+            cada premi al qual participin (Josep Maria Ribó o MLH). Els torns
+            existents es conserven. Després pots generar els horaris a Torns de
+            presentació.
           </p>
-          {error && (
-            <p role="alert" className="text-destructive">
-              {error}
-            </p>
-          )}
-          {notice && <p role="status">{notice}</p>}
           <fieldset disabled={busy} className="space-y-4">
             <label className="block space-y-2">
               Fitxer CSV (UTF-8, màxim 1 MB)
@@ -386,11 +436,13 @@ export function DevpostImport({
                         <td className="p-2">{r.team || r.team_code}</td>
                         <td className="p-2">
                           {r.challenge || "—"}
+                          {r.ribo_prize && " + Josep Maria Ribó"}
                           {r.mlh && " + MLH"}
                         </td>
                         <td className="p-2">
                           {
                             {
+                              pending: "Pendent de vincular",
                               skip: "Exclòs",
                               create: "Nou projecte",
                               update: "Actualitzar projecte",
@@ -436,9 +488,98 @@ export function DevpostImport({
           )}
         </CardContent>
       </Card>
+      {pending.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pendents de vincular ({pending.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {pending.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-wrap items-end gap-3 border-b pb-3"
+              >
+                <div className="min-w-48 flex-1">
+                  <a
+                    className="underline"
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {p.title} ↗
+                  </a>
+                  <div className="text-sm text-muted-foreground">
+                    TeamID del CSV · {p.submitted_team_code || "Sense codi"}
+                  </div>
+                </div>
+                <label className="grid gap-1 text-sm">
+                  Equip
+                  <select
+                    className="rounded border bg-background p-2"
+                    value={assignment[p.id]?.team || ""}
+                    onChange={(e) =>
+                      setAssignment({
+                        ...assignment,
+                        [p.id]: { ...assignment[p.id], team: e.target.value },
+                      })
+                    }
+                  >
+                    <option value="">Selecciona un equip</option>
+                    {teams
+                      .filter(
+                        (t) =>
+                          !linked.some((project) => project.group_id === t.id),
+                      )
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} · {t.code}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">
+                  Repte
+                  <select
+                    className="rounded border bg-background p-2"
+                    value={assignment[p.id]?.challenge ?? p.challenge}
+                    onChange={(e) =>
+                      setAssignment({
+                        ...assignment,
+                        [p.id]: {
+                          ...assignment[p.id],
+                          challenge: e.target.value,
+                        },
+                      })
+                    }
+                  >
+                    <option value="">Repte del perfil</option>
+                    {challenges
+                      .filter(
+                        (c) =>
+                          c.published &&
+                          !["mlh", "josep-maria-ribo"].includes(c.id),
+                      )
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <Button
+                  disabled={busy || !assignment[p.id]?.team}
+                  onClick={() => void assign(p)}
+                >
+                  Vincular projecte
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
-          <CardTitle>Projectes vinculats ({projects.length})</CardTitle>
+          <CardTitle>Projectes vinculats ({linked.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
@@ -451,7 +592,7 @@ export function DevpostImport({
                 </tr>
               </thead>
               <tbody>
-                {projects.map((p) => (
+                {linked.map((p) => (
                   <tr key={p.url} className="border-t">
                     <td className="p-2">
                       <a
@@ -476,8 +617,8 @@ export function DevpostImport({
               </tbody>
             </table>
           </div>
-          {!projects.length && (
-            <p className="text-sm">Encara no s’ha importat cap projecte.</p>
+          {!linked.length && (
+            <p className="text-sm">Encara no hi ha projectes vinculats.</p>
           )}
         </CardContent>
       </Card>
