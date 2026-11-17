@@ -1,7 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import { createSequentialMailBatch } from "./mail-batch";
+import { ApiError } from "./api";
 
 describe("sequential mail batch", () => {
+  it("identifies a rejected 90th request without replaying it", async () => {
+    const recipients = Array.from({ length: 143 }, (_, index) => ({
+      name: `User ${index + 1}`,
+    }));
+    const send = vi.fn(async ({ name }) => {
+      if (name === "User 90") throw new ApiError(429, "Massa peticions.");
+    });
+    const run = createSequentialMailBatch(recipients, send);
+    await expect(run(vi.fn())).rejects.toThrow(/89 de 143.*User 90.*HTTP 429/);
+    expect(send).toHaveBeenCalledTimes(90);
+  });
   it("processes all 38 recipients sequentially and reports progress", async () => {
     const recipients = Array.from({ length: 38 }, (_, id) => ({
       name: `User ${id}`,

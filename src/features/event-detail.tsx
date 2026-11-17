@@ -1,7 +1,6 @@
 "use client";
 import { EventMentors } from "./event-mentors";
 import { CompanyPortalAccess } from "./company-portal-access";
-import { needsReleaseReminder } from "@/lib/release-reminder";
 import { createSequentialMailBatch } from "@/lib/mail-batch";
 import { EventCommandCenter } from "./event-command-center";
 import { EventOperations, type OperationSection } from "./event-operations";
@@ -523,41 +522,55 @@ export function EventDetail({
     });
   }
 
-  const releaseReminderRecipients = participants.filter(needsReleaseReminder);
+  const [reminderQueue, setReminderQueue] = useState<{
+    pending: number;
+    queued: number;
+    checking: number[];
+  } | null>(null);
+  const [reminderVersion, setReminderVersion] = useState(0);
+  const [queueError, setQueueError] = useState(false);
+  useEffect(() => {
+    if (activeSection !== "comms") return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    setReminderQueue(null);
+    async function refresh() {
+      try {
+        const status = await request<NonNullable<typeof reminderQueue>>(
+          `/v1/event/${id}/release-reminders`,
+        );
+        if (active) {
+          setReminderQueue(status);
+          setQueueError(false);
+        }
+      } catch {
+        if (active) {
+          setReminderQueue(null);
+          setQueueError(true);
+        }
+      } finally {
+        if (active) timer = setTimeout(refresh, 10000);
+      }
+    }
+    void refresh();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeSection, id, reminderVersion]);
   function sendReleaseReminders() {
-    const targets = [...releaseReminderRecipients];
-    const batch = createSequentialMailBatch(targets, async (participant) => {
-      const result = await request<{ sent_at: string }>(
-        `/v1/event/${id}/release-reminder/${participant.id}`,
-        "POST",
-      );
-      setParticipants((current) =>
-        current.map((p) =>
-          p.id === participant.id
-            ? { ...p, release_reminder_sent_at: result.sent_at }
-            : p,
-        ),
-      );
-    });
+    if (!reminderQueue?.pending) return;
     setConfirmation({
-      title: `Enviar el recordatori a ${targets.length} participants`,
+      title: `Programar el recordatori per a ${reminderQueue.pending} participants`,
       description:
-        "S'enviarà a tots els acceptats amb assistència confirmada que encara no l'han rebut, independentment dels filtres. Els demanarà alliberar la plaça si no poden venir; no cancel·la cap plaça automàticament. Mantén aquesta finestra oberta fins que acabi.",
+        "El servidor enviarà els recordatoris pendents als acceptats amb assistència confirmada, independentment dels filtres. No es cancel·la cap plaça. Un cop confirmada la programació, pots tancar aquesta finestra.",
       run: async () => {
         setBusy(true);
         try {
-          await batch((sent, total) =>
-            setConfirmation(
-              (current) =>
-                current && {
-                  ...current,
-                  description: `Correus processats: ${sent} de ${total}. Mantén aquesta finestra oberta.`,
-                },
-            ),
-          );
-          toast.success(`Recordatoris processats: ${targets.length}`);
+          await request(`/v1/event/${id}/release-reminders`, "POST");
+          toast.success("Programació registrada. Ja pots tancar la finestra.");
         } finally {
-          await loadParticipants();
+          setReminderVersion((version) => version + 1);
           setBusy(false);
         }
       },
@@ -1422,15 +1435,22 @@ export function EventDetail({
               </Button>
               <Button
                 variant="outline"
-                disabled={
-                  !releaseReminderRecipients.length || busy || event?.archived
-                }
+                disabled={!reminderQueue?.pending || busy || event?.archived}
                 onClick={sendReleaseReminders}
               >
                 <Send data-icon="inline-start" />
                 Enviar recordatori d’alliberar plaça (
-                {releaseReminderRecipients.length})
+                {reminderQueue?.pending ?? "…"})
               </Button>
+              <p className="w-full text-sm text-muted-foreground" role="status">
+                {reminderQueue
+                  ? `Recordatoris en cua: ${reminderQueue.queued}.`
+                  : queueError
+                    ? "No s’ha pogut consultar la cua de recordatoris."
+                    : "Consultant la cua de recordatoris…"}
+                {!!reminderQueue?.checking.length &&
+                  ` En procés o pendents de verificació: ${reminderQueue.checking.map((userId) => participants.find((participant) => participant.id === userId)?.name ?? `#${userId}`).join(", ")}. No els reenviïs sense comprovar-ne l’estat.`}
+              </p>
             </CardContent>
           </Card>
           <TicketsCard id={id} />
