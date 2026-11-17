@@ -1,3 +1,5 @@
+import { ApiError } from "./api";
+
 /** Keep each mail within its own request budget; never replay an ambiguous send. */
 export function createSequentialMailBatch<T extends { name: string }>(
   recipients: readonly T[],
@@ -11,9 +13,13 @@ export function createSequentialMailBatch<T extends { name: string }>(
       for (const recipient of recipients) {
         try {
           await send(recipient);
-        } catch {
+        } catch (error) {
+          const diagnostic =
+            error instanceof ApiError
+              ? ` ${error.status ? `HTTP ${error.status}: ` : ""}${error.message}`
+              : "";
           throw new Error(
-            `Enviament aturat: ${sent} de ${recipients.length} processats. No s'ha pogut confirmar l'enviament a ${recipient.name}; podria haver-se enviat. La resta no s'ha intentat. Comprova l'estat dels correus abans de tornar a enviar.`,
+            `Enviament aturat: ${sent} de ${recipients.length} processats. No s'ha pogut confirmar l'enviament a ${recipient.name}; podria haver-se enviat. La resta no s'ha intentat. Comprova l'estat dels correus abans de tornar a enviar.${diagnostic}`,
           );
         }
         progress(++sent, recipients.length);

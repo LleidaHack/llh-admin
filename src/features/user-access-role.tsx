@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { request, errorMessage, type Profile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,6 @@ export function UserAccessRole({
   const [viewer, setViewer] = useState<Profile | null>(null),
     [role, setRole] = useState(initialRole),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [history, setHistory] = useState<Change[]>([]);
   useEffect(() => {
@@ -76,7 +76,6 @@ export function UserAccessRole({
       </label>
       <p>{descriptions[role]}</p>
       {error && <p role="alert">{error}</p>}
-      {notice && <p role="status">{notice}</p>}
       <Button
         disabled={
           busy ||
@@ -87,13 +86,12 @@ export function UserAccessRole({
             return;
           setBusy(true);
           setError("");
-          setNotice("");
           try {
             await request(`/v1/access/users/${userId}/role`, "PATCH", {
               role,
               reason: `Assign ${role} role from user management`,
             });
-            setNotice(
+            toast.success(
               "Rol actualitzat. Els permisos ja s’apliquen a la sessió actual.",
             );
             setHistory(

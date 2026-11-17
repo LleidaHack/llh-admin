@@ -46,16 +46,32 @@ export function CompanyPortalAccess({
     [selected, setSelected] = useState<string[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [demo, setDemo] = useState<boolean | null>(null);
   const pending = useRef<{ key: string; id: string } | null>(null);
   const load = useCallback(async () => {
     const [access, config] = await Promise.all([
       request<Access[]>(`/v1/company-portal/manage/${id}`),
-      request<{ rooms: { id: string; title: string }[] }>(
-        `/v1/operations/${id}/manage`,
-      ),
+      request<{
+        company_demo?: boolean;
+        company_demo_phase?: string;
+        phase: string;
+        deadline?: string;
+        rooms: { id: string; title: string }[];
+      }>(`/v1/operations/${id}/manage`),
     ]);
     setRows(access);
     setRooms(config.rooms);
+    const phase =
+      config.phase === "hacking" &&
+      config.deadline &&
+      Date.parse(config.deadline) <= Date.now()
+        ? "judging"
+        : config.phase;
+    setDemo(
+      !!config.company_demo &&
+        (phase === config.company_demo_phase ||
+          !["judging", "finished"].includes(phase)),
+    );
   }, [id]);
   useEffect(() => {
     void load().catch((e) => setError(errorMessage(e)));
@@ -95,6 +111,36 @@ export function CompanyPortalAccess({
         <CardTitle>Invitacions i permisos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={demo === true}
+            disabled={busy || demo === null}
+            onChange={async (event) => {
+              const enabled = event.target.checked;
+              setBusy(true);
+              setError("");
+              try {
+                const result = await request<{ enabled: boolean }>(
+                  `/v1/company-portal/manage/${id}/demo`,
+                  "PUT",
+                  { enabled },
+                );
+                setDemo(result.enabled);
+              } catch (e) {
+                setError(errorMessage(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+          Mode de demostració per a empreses
+        </label>
+        <p className="text-sm text-muted-foreground">
+          Activa la demo per mostrar un projecte fictici a totes les empreses,
+          també durant el judging. En desactivar-la, el portal torna a la vista
+          de la fase actual.
+        </p>
         <p className="text-sm text-muted-foreground">
           Un compte per empresa. Només veu els projectes de les sales que
           marquis.
