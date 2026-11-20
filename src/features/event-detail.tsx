@@ -6,6 +6,7 @@ import { EventCommandCenter } from "./event-command-center";
 import { EventOperations, type OperationSection } from "./event-operations";
 import { useCanRunCritical } from "@/lib/viewer";
 import { confirmDiscardUnsaved, setUnsavedChanges } from "@/lib/unsaved";
+import { ParticipantExportTab } from "./participant-export";
 import { CreditsExport } from "./credits-export";
 import { TeamMemberDialog } from "./user-profile";
 import { useParticipantDetails } from "./use-participant-details";
@@ -134,6 +135,7 @@ const eventMenu = [
       ["settings", "Informació"],
       ["sponsors", "Patrocinadors"],
       ["statistics", "Estadístiques"],
+      ["export", "Exportar"],
       ["audit", "Historial d’inscripcions"],
       ["operation-audit", "Traçabilitat"],
     ],
@@ -1466,6 +1468,9 @@ export function EventDetail({
         </TabsContent>
         <TabsContent value="status" className="pt-4">
           <EventCommandCenter id={id} />
+        </TabsContent>
+        <TabsContent value="export" className="pt-4">
+          <ParticipantExportTab eventId={id} />
         </TabsContent>
         <TabsContent value="statistics" className="pt-4">
           <StatisticsTab id={id} />
