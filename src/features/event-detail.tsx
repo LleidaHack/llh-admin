@@ -1131,19 +1131,26 @@ export function EventDetail({
                         const byName = participants.filter(
                           (p) => norm(p.name) === norm(m.name),
                         );
-                        const accepted =
+                        const status =
                           (
                             byIdentity ||
                             (byName.length === 1 ? byName[0] : undefined)
-                          )?.status === "accepted";
+                          )?.status;
+                        const color =
+                          status === "cancelled"
+                            ? "text-black dark:bg-white"
+                            : status === "accepted"
+                              ? "text-green-600"
+                              : "text-red-600";
+                        const label = STATUS_LABELS[status ?? ""] ?? "No acceptat";
                         return (
                           <span key={m.id ?? m.nickname}>
                             {i > 0 && ", "}
                             <button
                               type="button"
-                              className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${accepted ? "text-green-600" : "text-red-600"}`}
-                              title={accepted ? "Acceptat" : "No acceptat"}
-                              aria-label={`Veure la fitxa de ${m.name}`}
+                              className={`cursor-pointer rounded-sm font-medium underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 ${color}`}
+                              title={label}
+                              aria-label={`Veure la fitxa de ${m.name} · ${label}`}
                               onClick={() => setTeamMember(m)}
                             >
                               {m.name}
