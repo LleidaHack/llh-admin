@@ -36,3 +36,9 @@ In Projectes i jurat → Reptes, save challenge content, mark the intended chall
 ## Manual YouTube broadcast
 
 Comunicació → Live accepts a YouTube video URL and a **Mostrar retransmissió** switch. Save to publish or hide the embedded player. The switch defaults to false and requires a valid YouTube video link when enabled. Organizers must disable it after the stream ends; no automatic live-status detection or Google API key is involved. Live starts playback muted, subject to browser policy. Deploy the backend configuration update before the clients; the JSON configuration requires no database migration.
+
+## Participant CSV export
+
+Administració → Exportar downloads every registration, regardless of the filters or pagination in Inscripcions. The file includes registration status, confirmation, actual check-in, teams, registration preferences, ECTS, coins, and one uniquely labelled Yes/No column per meal. Meal consumption combines legacy deliveries and active scans across rounds, counting each meal only once. Unknown optional values are not converted to No. CSV cells are escaped and formula-neutralized, and the download includes a UTF-8 BOM for Excel. The existing filtered registration and ECTS exports remain available.
+
+Deploy the accompanying `LleidaHackBackend` changes providing `GET /v1/operations/{event_id}/participants-export` before using this section. This endpoint requires admin/superadmin access and uses existing tables; no migration is needed. It returns registration snapshots without CV contents or authentication tokens. Failed requests show an error and do not download a partial file.
