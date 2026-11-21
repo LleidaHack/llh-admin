@@ -151,7 +151,9 @@ export function ParticipantExportTab({ eventId }: { eventId: number }) {
           <CardDescription>
             CSV amb les 12 columnes MLH: nom, cognoms, correu, telèfon, edat,
             país de residència, centre, estudis i respostes als consentiments
-            MLH. Inclou totes les inscripcions, sense filtrar per estat.
+            MLH. Afegeix dues columnes amb les preferències actuals de recepció
+            de notificacions i comunicacions comercials. Inclou totes les
+            inscripcions, sense filtrar per estat.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

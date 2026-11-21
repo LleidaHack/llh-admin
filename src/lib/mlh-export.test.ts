@@ -21,9 +21,9 @@ const participant: ParticipantExport["participants"][number] = {
 };
 
 describe("MLH export", () => {
-  it("exports the 12 requested headers even for empty events", () => {
+  it("exports MLH and communication preference headers even for empty events", () => {
     expect(mlhCsv([], [])).toBe(
-      '"First name","Last name","Email","Phone number","Age","Country of residence","School","Current level of study","MLH Checkbox Responses","MLH Code of Conduct","Event Logistics Information","Communication from MLH"',
+      '"First name","Last name","Email","Phone number","Age","Country of residence","School","Current level of study","MLH Checkbox Responses","MLH Code of Conduct","Event Logistics Information","Communication from MLH","Receive notifications","Receive commercial communications"',
     );
   });
 
@@ -40,7 +40,7 @@ describe("MLH export", () => {
       ],
     );
     expect(csv.split("\r\n")[1]).toBe(
-      '"Maria","Garcia López","maria@example.test","\'+34612345678","21","","UdL","University","MLH Code of Conduct: Yes","Yes","",""',
+      '"Maria","Garcia López","maria@example.test","\'+34612345678","21","","UdL","University","MLH Code of Conduct: Yes","Yes","","","",""',
     );
     expect(csv).not.toContain("Lleida");
   });
@@ -58,6 +58,32 @@ describe("MLH export", () => {
     expect(csv.split("\r\n")[2]).toContain('"Alex",""');
     expect(csv.split("\r\n")[2]).toMatch(/,"","","",""$/);
   });
+
+  it.each([
+    [true, false, '"Yes","No"'],
+    [false, true, '"No","Yes"'],
+    [null, undefined, '"",""'],
+  ] as const)(
+    "exports communication preferences independently (%s, %s)",
+    (notifications, commercial, expected) => {
+      const csv = mlhCsv(
+        [participant],
+        [
+          {
+            id: participant.id,
+            config: {
+              recive_notifications: notifications,
+              comercial_notifications: commercial,
+            },
+          },
+        ],
+      );
+      expect(csv.split("\r\n")[1]).toBe(
+        '"Maria","Garcia López","maria@example.test","","21","","UdL","University","","","","",' +
+          expected,
+      );
+    },
+  );
 
   it("escapes quotes and neutralizes spreadsheet formulas", () => {
     const csv = mlhCsv(
