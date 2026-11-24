@@ -148,6 +148,8 @@ const messages: Record<string, string> = {
     "Aquest correu pertany a un compte existent que no és de convidat.",
   "email belongs to another account":
     "Aquest correu ja pertany a un altre compte.",
+  "account has event history (lleidacoins, scans, role changes or articles) and cannot be deleted; ban it instead":
+    "Aquest compte té historial a l’esdeveniment (LleidaCoins, escanejos, canvis de rol o articles) i no es pot eliminar. Bloqueja’l en lloc d’eliminar-lo.",
   "assign another company leader before transferring this user":
     "Assigna un altre responsable a l'empresa abans de transferir aquest usuari.",
 };
