@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guestTicketPath, type Guest } from "./guests";
+import { guestListPath, guestTicketPath, type Guest } from "./guests";
 
 const guest: Guest = {
   id: 7,
@@ -14,6 +14,14 @@ describe("guestTicketPath", () => {
   it("sends a first ticket only to that guest", () => {
     expect(guestTicketPath(3, guest)).toBe(
       "/v1/event/3/tickets/send?audience=convidat&user_id=7",
+    );
+  });
+  it("targets the company audience for company tickets", () => {
+    expect(guestTicketPath(3, guest, "empresa")).toBe(
+      "/v1/event/3/tickets/send?audience=empresa&user_id=7",
+    );
+    expect(guestListPath(3, "empresa")).toBe(
+      "/v1/operations/3/guests?kind=empresa",
     );
   });
   it("forces a resend once the ticket was delivered", () => {
