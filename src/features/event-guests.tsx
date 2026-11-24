@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { request, errorMessage } from "@/lib/api";
-import { guestTicketPath, type Guest } from "@/lib/guests";
+import {
+  guestCopy,
+  guestListPath,
+  guestTicketPath,
+  type Guest,
+  type GuestKind,
+} from "@/lib/guests";
 import {
   Card,
   CardHeader,
@@ -20,8 +26,16 @@ import { ErrorBox, EmptyBox } from "@/components/shared";
 // Ticket mails are sent in the background; refresh once it has had time to run.
 const REFRESH_AFTER_SEND_MS = 2500;
 
-export function EventGuests({ id }: { id: number }) {
+export function EventGuests({
+  id,
+  kind = "convidat",
+}: {
+  id: number;
+  kind?: GuestKind;
+}) {
   const base = `/v1/operations/${id}/guests`;
+  const copy = guestCopy[kind];
+  const field = `${kind}-${id}`;
   const [items, setItems] = useState<Guest[] | null>(null),
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
@@ -29,8 +43,8 @@ export function EventGuests({ id }: { id: number }) {
     [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    setItems(await request<Guest[]>(base));
-  }, [base]);
+    setItems(await request<Guest[]>(guestListPath(id, kind)));
+  }, [id, kind]);
 
   useEffect(() => {
     void load().catch((e) => setError(errorMessage(e)));
@@ -51,7 +65,7 @@ export function EventGuests({ id }: { id: number }) {
   }
 
   async function sendTicket(guest: Guest) {
-    await request(guestTicketPath(id, guest), "POST");
+    await request(guestTicketPath(id, guest, kind), "POST");
     toast.success(`Entrada enviada a ${guest.email}`);
     setTimeout(() => void load().catch(() => {}), REFRESH_AFTER_SEND_MS);
   }
@@ -61,11 +75,11 @@ export function EventGuests({ id }: { id: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{active.length} convidats</CardTitle>
+        <CardTitle>{copy.count(active.length)}</CardTitle>
         <CardDescription>
-          Crea un convidat amb el nom i el correu i envia-li l’entrada amb el
-          rol <strong>Convidat</strong>. Inclou el QR i els botons per afegir-la
-          a Apple Wallet (iOS) i Google Wallet (Android).
+          Crea {copy.singular} amb el nom i el correu i envia-li l’entrada amb
+          el rol <strong>{copy.role}</strong>. Inclou el QR i els botons per
+          afegir-la a Apple Wallet (iOS) i Google Wallet (Android).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -79,7 +93,7 @@ export function EventGuests({ id }: { id: number }) {
                 id: number;
                 name: string;
                 email: string;
-              }>(base, "POST", { name, email });
+              }>(base, "POST", { name, email, kind });
               setName("");
               setEmail("");
               await sendTicket({
@@ -92,27 +106,27 @@ export function EventGuests({ id }: { id: number }) {
           }}
         >
           <Field className="min-w-56 flex-1">
-            <FieldLabel htmlFor={`guest-name-${id}`}>Nom</FieldLabel>
+            <FieldLabel htmlFor={`guest-name-${field}`}>Nom</FieldLabel>
             <Input
-              id={`guest-name-${id}`}
+              id={`guest-name-${field}`}
               required
               minLength={2}
               maxLength={150}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nom i cognoms"
+              placeholder={copy.namePlaceholder}
             />
           </Field>
           <Field className="min-w-56 flex-1">
-            <FieldLabel htmlFor={`guest-email-${id}`}>Correu</FieldLabel>
+            <FieldLabel htmlFor={`guest-email-${field}`}>Correu</FieldLabel>
             <Input
-              id={`guest-email-${id}`}
+              id={`guest-email-${field}`}
               required
               type="email"
               maxLength={254}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="convidat@example.com"
+              placeholder={copy.emailPlaceholder}
             />
           </Field>
           <Button disabled={busy}>
@@ -121,13 +135,12 @@ export function EventGuests({ id }: { id: number }) {
           </Button>
         </form>
         <p className="text-sm text-muted-foreground">
-          Els convidats no tenen accés a cap aplicació: només reben l’entrada.
-          Al check-in es pot vincular l’acreditació i fer-la servir als àpats.
+          Aquestes persones no tenen accés a cap aplicació: només reben
+          l’entrada. Al check-in es pot vincular l’acreditació i fer-la servir
+          als àpats.
         </p>
         {items?.length === 0 && (
-          <EmptyBox title="Encara no hi ha convidats">
-            Afegeix el primer convidat amb el formulari.
-          </EmptyBox>
+          <EmptyBox title={copy.emptyTitle}>{copy.emptyHint}</EmptyBox>
         )}
         {items?.map((guest) => (
           <div

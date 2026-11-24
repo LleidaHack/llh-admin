@@ -101,6 +101,7 @@ const eventMenu = [
       ["checkin", "Assistència"],
       ["mentors", "Mentors"],
       ["guests", "Convidats"],
+      ["company-tickets", "Entrades d’empresa"],
     ],
   },
   {
@@ -760,6 +761,9 @@ export function EventDetail({
         </TabsContent>
         <TabsContent value="guests" className="pt-4">
           <EventGuests id={id} />
+        </TabsContent>
+        <TabsContent value="company-tickets" className="pt-4">
+          <EventGuests id={id} kind="empresa" />
         </TabsContent>
         <TabsContent value="company-portal" className="space-y-4 pt-4">
           {companyCatalogueFeedback}
