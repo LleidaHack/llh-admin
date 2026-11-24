@@ -55,7 +55,12 @@ export function TicketsCard({ id }: { id: number }) {
     audience === "all"
       ? null
       : status?.groups?.[
-          { hacker: "Hacker", mentor: "Mentor", staff: "Staff" }[audience]!
+          {
+            hacker: "Hacker",
+            mentor: "Mentor",
+            staff: "Staff",
+            convidat: "Convidat",
+          }[audience]!
         ];
   const eligible =
     selectedGroup?.eligible ??
@@ -134,8 +139,8 @@ export function TicketsCard({ id }: { id: number }) {
         <CardTitle>Tiquets d&apos;entrada</CardTitle>
         <CardDescription>
           Envia el QR i l’enllaç personal a l’entrada als participants acceptats
-          i confirmats, als mentors actius i al staff (LleidaHack, admin i
-          superadmin).
+          i confirmats, als mentors actius, als convidats i al staff
+          (LleidaHack, admin i superadmin).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -215,6 +220,7 @@ export function TicketsCard({ id }: { id: number }) {
               Mentors actius
             </NativeSelectOption>
             <NativeSelectOption value="staff">Staff</NativeSelectOption>
+            <NativeSelectOption value="convidat">Convidats</NativeSelectOption>
           </NativeSelect>
         </label>
         {(status?.missing_email ?? 0) > 0 && (

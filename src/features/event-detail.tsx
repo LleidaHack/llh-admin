@@ -1,5 +1,6 @@
 "use client";
 import { EventMentors } from "./event-mentors";
+import { EventGuests } from "./event-guests";
 import { CompanyPortalAccess } from "./company-portal-access";
 import { createSequentialMailBatch } from "@/lib/mail-batch";
 import { EventCommandCenter } from "./event-command-center";
@@ -99,6 +100,7 @@ const eventMenu = [
       ["teams", "Equips"],
       ["checkin", "Assistència"],
       ["mentors", "Mentors"],
+      ["guests", "Convidats"],
     ],
   },
   {
@@ -756,6 +758,9 @@ export function EventDetail({
         <TabsContent value="mentors" className="pt-4">
           <EventMentors base={`/v1/operations/${id}`} />
         </TabsContent>
+        <TabsContent value="guests" className="pt-4">
+          <EventGuests id={id} />
+        </TabsContent>
         <TabsContent value="company-portal" className="space-y-4 pt-4">
           {companyCatalogueFeedback}
           <CompanyPortalAccess
@@ -1133,18 +1138,18 @@ export function EventDetail({
                         const byName = participants.filter(
                           (p) => norm(p.name) === norm(m.name),
                         );
-                        const status =
-                          (
-                            byIdentity ||
-                            (byName.length === 1 ? byName[0] : undefined)
-                          )?.status;
+                        const status = (
+                          byIdentity ||
+                          (byName.length === 1 ? byName[0] : undefined)
+                        )?.status;
                         const color =
                           status === "cancelled"
                             ? "text-black dark:bg-white"
                             : status === "accepted"
                               ? "text-green-600"
                               : "text-red-600";
-                        const label = STATUS_LABELS[status ?? ""] ?? "No acceptat";
+                        const label =
+                          STATUS_LABELS[status ?? ""] ?? "No acceptat";
                         return (
                           <span key={m.id ?? m.nickname}>
                             {i > 0 && ", "}
