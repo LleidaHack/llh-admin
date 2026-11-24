@@ -27,6 +27,7 @@ export const accountType = (type: string) =>
     lleida_hacker: "Organitzador",
     company: "Empresa",
     mentor: "Mentor",
+    guest: "Convidat",
     service: "Servei",
   })[type] || "Compte";
 const messages: Record<string, string> = {
@@ -141,6 +142,12 @@ const messages: Record<string, string> = {
   "you are not allowed to add meals": "No tens permís per crear àpats.",
   "you are not allowed to delete meals": "No tens permís per eliminar àpats.",
   "you are not allowed to update meals": "No tens permís per editar àpats.",
+  "guest already invited to this event":
+    "Aquesta persona ja és convidada a aquest esdeveniment.",
+  "email belongs to an existing account that is not a guest":
+    "Aquest correu pertany a un compte existent que no és de convidat.",
+  "email belongs to another account":
+    "Aquest correu ja pertany a un altre compte.",
   "assign another company leader before transferring this user":
     "Assigna un altre responsable a l'empresa abans de transferir aquest usuari.",
 };

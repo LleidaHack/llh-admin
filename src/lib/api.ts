@@ -22,7 +22,7 @@ export type Profile = {
   access_role?: AccessRole;
 };
 export type AccessRole =
-  "superadmin" | "admin" | "lleidahacker" | "hacker" | "mentor";
+  "superadmin" | "admin" | "lleidahacker" | "hacker" | "mentor" | "guest";
 type RoleSource = { access_role?: string | null; type?: string };
 // Older backends do not send access_role; their organizers (legacy
 // "lleida_hacker" type) had full access, so treat them as "legacy".
