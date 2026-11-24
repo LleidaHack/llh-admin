@@ -136,6 +136,12 @@ export type TicketsStatus = {
     estimated_remaining_seconds?: number | null;
   };
 };
+export type DiscordInviteStatus = {
+  discord_url: string | null;
+  recipients: number;
+  running: boolean;
+  progress: TicketsStatus["progress"];
+};
 export type Voucher = {
   id: number;
   event_id: number;

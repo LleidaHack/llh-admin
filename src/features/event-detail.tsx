@@ -75,6 +75,7 @@ import {
   MealCheckIn,
   ParticipantDetailDialog,
 } from "./event-insights";
+import { DiscordInviteCard } from "./discord-invite-card";
 import { TicketsCard, VouchersCard } from "./event-checkin";
 import { AuditLogTab } from "./event-audit";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -1471,6 +1472,7 @@ export function EventDetail({
               </p>
             </CardContent>
           </Card>
+          <DiscordInviteCard id={id} />
           <TicketsCard id={id} />
           <AcceptedMailsCard id={id} />
           <MailActions id={id} />
