@@ -194,14 +194,51 @@ export function EventCommandCenter({ id }: { id: number }) {
                 <CardContent className="space-y-3">
                   {room.presentations.length ? (
                     room.presentations.map((p) => (
-                      <p key={p.id}>
-                        <strong>{p.team}</strong> ·{" "}
-                        {p.state === "called"
-                          ? "Avisat per preparar-se"
-                          : p.started_at
-                            ? "Presentant"
-                            : "A la sala, pendent d’iniciar"}
-                      </p>
+                      <div key={p.id} className="space-y-2">
+                        <p>
+                          <strong>{p.team}</strong> ·{" "}
+                          {p.state === "called"
+                            ? "Avisat per preparar-se"
+                            : p.started_at
+                              ? "Presentant"
+                              : "A la sala, pendent d’iniciar"}
+                        </p>
+                        {p.state === "presenting" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => {
+                              const reason = prompt(
+                                `Motiu per finalitzar la presentació de ${p.team} (es cridarà el següent equip):`,
+                              );
+                              if (!reason || reason.trim().length < 3) return;
+                              // Same id on retry so a lost response never
+                              // finishes the next team's presentation.
+                              const key = JSON.stringify(["finish", p.id]);
+                              if (attempt.current?.key !== key)
+                                attempt.current = {
+                                  key,
+                                  id: crypto.randomUUID(),
+                                };
+                              void run(async () => {
+                                await request(
+                                  `${base}/rooms/${encodeURIComponent(room.id)}/finish`,
+                                  "POST",
+                                  {
+                                    presentation_id: p.id,
+                                    reason: reason.trim(),
+                                    operation_id: attempt.current!.id,
+                                  },
+                                );
+                                attempt.current = null;
+                              });
+                            }}
+                          >
+                            Finalitzar presentació
+                          </Button>
+                        )}
+                      </div>
                     ))
                   ) : (
                     <p>Sense equips actius.</p>
