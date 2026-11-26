@@ -405,6 +405,10 @@ export function EventOperations({
                     {[
                       ["slack_url", "Invitació de Discord"],
                       [
+                        "mentor_discord_url",
+                        "Invitació de Discord per a mentors (privada, dona el rol de mentor)",
+                      ],
+                      [
                         "stream_url",
                         "Enllaç del vídeo en directe de YouTube (URL)",
                       ],

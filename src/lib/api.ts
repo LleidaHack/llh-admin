@@ -139,6 +139,8 @@ export type TicketsStatus = {
 export type DiscordInviteStatus = {
   discord_url: string | null;
   recipients: number;
+  mentor_discord_url?: string | null;
+  mentor_recipients?: number;
   running: boolean;
   progress: TicketsStatus["progress"];
 };
