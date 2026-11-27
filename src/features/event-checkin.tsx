@@ -417,13 +417,19 @@ export function VouchersCard({ id }: { id: number }) {
     });
 
   const needle = filter.trim().toLowerCase();
-  const visible = (vouchers ?? []).filter(
-    (v) =>
-      !needle ||
-      v.code.toLowerCase().includes(needle) ||
-      (v.hacker?.name ?? "").toLowerCase().includes(needle) ||
-      (v.hacker?.email ?? "").toLowerCase().includes(needle),
-  );
+  // Linked vouchers first (latest link on top), then the free ones.
+  const visible = (vouchers ?? [])
+    .filter(
+      (v) =>
+        !needle ||
+        v.code.toLowerCase().includes(needle) ||
+        (v.hacker?.name ?? "").toLowerCase().includes(needle) ||
+        (v.hacker?.email ?? "").toLowerCase().includes(needle),
+    )
+    .sort((a, b) => {
+      if (!!a.hacker !== !!b.hacker) return a.hacker ? -1 : 1;
+      return (b.assigned_at ?? "").localeCompare(a.assigned_at ?? "");
+    });
   const currentPage = Math.min(
     page,
     Math.max(0, Math.ceil(visible.length / PAGE_SIZE) - 1),
