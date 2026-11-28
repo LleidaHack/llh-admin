@@ -153,7 +153,7 @@ export function EventGuests({
         <p className="text-sm text-muted-foreground">
           Aquestes persones no tenen accés a cap aplicació: només reben
           l’entrada. Al check-in es pot vincular l’acreditació i fer-la servir
-          als àpats.
+          als àpats i a les activitats (sense LleidaCoins).
         </p>
         {items?.length === 0 && (
           <EmptyBox title={copy.emptyTitle}>{copy.emptyHint}</EmptyBox>
