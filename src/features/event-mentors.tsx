@@ -56,8 +56,8 @@ export function EventMentors({ base }: { base: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Només tenen accés als àpats. L’acreditació es vincula des de
-          l’escàner.
+          Fan servir l’acreditació als àpats i a les activitats (sense
+          LleidaCoins). L’acreditació es vincula des de l’escàner.
         </p>
         <ErrorBox error={error} />
         <CsvImport

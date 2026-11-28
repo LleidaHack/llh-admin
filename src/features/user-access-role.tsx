@@ -17,7 +17,8 @@ const descriptions: Record<string, string> = {
   admin: "Gestió operativa sense canviar rols, saldos ni regles de premis.",
   lleidahacker: "Escàner QR a HackEPS. Sense accés a Gestió.",
   hacker: "Perfil, equip, QR, punts i torns propis.",
-  mentor: "Acreditació per als àpats. Sense escàner, punts ni accés a Gestió.",
+  mentor:
+    "Acreditació per als àpats i les activitats. Sense escàner, punts ni accés a Gestió.",
 };
 export function UserAccessRole({
   userId,
@@ -77,10 +78,7 @@ export function UserAccessRole({
       <p>{descriptions[role]}</p>
       {error && <p role="alert">{error}</p>}
       <Button
-        disabled={
-          busy ||
-          (viewer.id === userId && role !== "superadmin")
-        }
+        disabled={busy || (viewer.id === userId && role !== "superadmin")}
         onClick={async () => {
           if (!window.confirm(`Assignar el rol ${role} a aquest usuari?`))
             return;
