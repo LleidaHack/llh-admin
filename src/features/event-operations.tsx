@@ -1,6 +1,7 @@
 "use client";
 import { toast } from "sonner";
 import { ActivityRanking } from "./activity-ranking";
+import { CoinChallenge } from "./coin-challenge";
 import { CsvImport } from "@/components/csv-import";
 import { importChallenges } from "@/lib/csv-import";
 
@@ -738,6 +739,7 @@ export function EventOperations({
       {tab === "activities" && (
         <ActivityRanking eventId={id} activities={data.activities || []} />
       )}
+      {tab === "activities" && <CoinChallenge eventId={id} />}
       {tab === "meals" && (
         <div className="space-y-4">
           <p>
