@@ -1054,6 +1054,28 @@ export function EventDetail({
                               Acceptar
                             </Button>
                           )}
+                        {p.status === "cancelled" && (
+                          <Button
+                            size="sm"
+                            disabled={busy}
+                            onClick={() =>
+                              setConfirmation({
+                                title: `Tornar a acceptar ${p.name}`,
+                                description:
+                                  "Va cancel·lar la plaça. Tornarà a estar acceptat i rebrà un nou correu d'acceptació per confirmar l'assistència.",
+                                run: async () => {
+                                  await request(
+                                    `/v1/event/${id}/reaccept/${p.id}`,
+                                    "PUT",
+                                  );
+                                  await loadParticipants();
+                                },
+                              })
+                            }
+                          >
+                            Tornar a acceptar
+                          </Button>
+                        )}
                         {p.status === "accepted" && (
                           <Button
                             variant="outline"

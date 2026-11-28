@@ -56,3 +56,8 @@ export function guestTicketPath(
 ) {
   return `/v1/event/${eventId}/tickets/send?audience=${kind}&user_id=${guest.id}${guest.ticket_sent_at ? "&force=true" : ""}`;
 }
+
+// Turn a guest into a hacker account; they get a mail to set their password.
+export function guestPromotePath(eventId: number, guest: Guest) {
+  return `/v1/operations/${eventId}/guests/${guest.id}/promote`;
+}

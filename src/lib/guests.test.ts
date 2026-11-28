@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { guestListPath, guestTicketPath, type Guest } from "./guests";
+import {
+  guestListPath,
+  guestPromotePath,
+  guestTicketPath,
+  type Guest,
+} from "./guests";
 
 const guest: Guest = {
   id: 7,
@@ -28,5 +33,13 @@ describe("guestTicketPath", () => {
     expect(
       guestTicketPath(3, { ...guest, ticket_sent_at: "2026-11-24T10:00:00" }),
     ).toBe("/v1/event/3/tickets/send?audience=convidat&user_id=7&force=true");
+  });
+});
+
+describe("guestPromotePath", () => {
+  it("promotes that guest within the event", () => {
+    expect(guestPromotePath(3, guest)).toBe(
+      "/v1/operations/3/guests/7/promote",
+    );
   });
 });

@@ -6,6 +6,7 @@ import { request, errorMessage } from "@/lib/api";
 import {
   guestCopy,
   guestListPath,
+  guestPromotePath,
   guestTicketPath,
   type Guest,
   type GuestKind,
@@ -68,6 +69,21 @@ export function EventGuests({
     await request(guestTicketPath(id, guest, kind), "POST");
     toast.success(`Entrada enviada a ${guest.email}`);
     setTimeout(() => void load().catch(() => {}), REFRESH_AFTER_SEND_MS);
+  }
+
+  async function promote(guest: Guest) {
+    const result = await request<{ email: string; password_mail: boolean }>(
+      guestPromotePath(id, guest),
+      "POST",
+    );
+    if (result.password_mail)
+      toast.success(
+        `${guest.name} ja és hacker. Hem enviat a ${result.email} un correu per crear la contrasenya.`,
+      );
+    else
+      toast.warning(
+        `${guest.name} ja és hacker, però no s'ha pogut enviar el correu. Que restableixi la contrasenya des de la web.`,
+      );
   }
 
   const active = items?.filter((g) => g.active) ?? [];
@@ -213,6 +229,22 @@ export function EventGuests({
               >
                 {guest.active ? "Desactivar" : "Activar"}
               </Button>
+              {kind === "convidat" && guest.active && (
+                <Button
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Convertir ${guest.name} en hacker? Deixarà de ser convidat (perdrà l’entrada de Convidat) i rebrà un correu per crear la contrasenya. Després s’haurà d’inscriure a l’esdeveniment com qualsevol participant.`,
+                      )
+                    )
+                      void run(() => promote(guest));
+                  }}
+                >
+                  Fer hacker
+                </Button>
+              )}
             </div>
           </div>
         ))}
